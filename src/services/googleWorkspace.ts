@@ -19,6 +19,196 @@ provider.addScope('https://www.googleapis.com/auth/spreadsheets');
 let cachedAccessToken: string | null = null;
 let isSigningIn = false;
 
+const STORAGE_KEY_WEBHOOK = 'cineslide_sheet_webhook';
+const STORAGE_KEY_SHEET = 'cineslide_sheet_url';
+
+// Default starter Google Apps Script snippet generator for user reference
+export const DEFAULT_APPS_SCRIPT_CODE = `/**
+ * Kode Google Apps Script - Webhook Studio Suara AI & Google Sheets
+ * 1. Buka Google Sheets -> Ekstensi -> Apps Script
+ * 2. Tempel kode ini, lalu klik "Terapkan" -> "Penerapan Baru"
+ * 3. Pilih Jenis: "Aplikasi Web", Akses: "Siapa Saja" (Anyone)
+ * 4. Salin URL Aplikasi Web dan tempel di Studio Suara AI
+ */
+
+const APP_FOLDER = 'Studio Suara AI';
+const LIST_SHEET = 'Daftar File';
+
+function doGet(e) {
+  return handleRequest(e);
+}
+
+function doPost(e) {
+  return handleRequest(e);
+}
+
+function handleRequest(e) {
+  let req = {};
+  try {
+    req = JSON.parse(e.postData.contents);
+  } catch(err) {
+    req = e.parameter || {};
+  }
+  
+  const action = req.action;
+  let response = { success: true };
+  
+  try {
+    const ss = getSpreadsheet_();
+    if (action === 'saveProject') {
+      const file = saveProjectFile_(req.name, req.json, req.projectId);
+      registerRow_(ss, 'Proyek', req.name, req.scenes, req.duration, file);
+      response = { success: true, fileId: file.getId(), url: file.getUrl() };
+    } else if (action === 'registerFile') {
+      const file = DriveApp.getFileById(req.fileId);
+      registerRow_(ss, req.type, req.name, req.scenes, req.duration, file);
+      response = { success: true, url: file.getUrl() };
+    } else if (action === 'getLibrary') {
+      response = { items: getLibraryItems_(ss), sheetUrl: ss.getUrl() };
+    } else if (action === 'deleteEntry') {
+      deleteEntry_(ss, req.id);
+      response = { success: true };
+    } else {
+      response = { success: true, sheetUrl: ss.getUrl() };
+    }
+  } catch (err) {
+    response = { success: false, error: err.message };
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify(response))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getFolder_() {
+  const folders = DriveApp.getFoldersByName(APP_FOLDER);
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder(APP_FOLDER);
+}
+
+function getSpreadsheet_() {
+  const folder = getFolder_();
+  const files = folder.getFilesByName('Studio Suara AI - Daftar File');
+  if (files.hasNext()) return SpreadsheetApp.open(files.next());
+  
+  const ss = SpreadsheetApp.create('Studio Suara AI - Daftar File');
+  DriveApp.getFileById(ss.getId()).moveTo(folder);
+  const sheet = ss.getSheets()[0];
+  sheet.setName(LIST_SHEET);
+  sheet.getRange('A1:H1').setValues([['Tanggal', 'Jenis', 'Nama', 'Adegan', 'Durasi (dtk)', 'Ukuran (MB)', 'Link Drive', 'File ID']]).setFontWeight('bold');
+  return ss;
+}
+
+function registerRow_(ss, type, name, scenes, duration, file) {
+  const sh = ss.getSheetByName(LIST_SHEET);
+  const row = [new Date(), type, name, scenes || '', duration || '', Math.round(file.getSize()/1048576*100)/100, file.getUrl(), file.getId()];
+  const hit = sh.createTextFinder(file.getId()).matchEntireCell(true).findNext();
+  if (hit) sh.getRange(hit.getRow(), 1, 1, 8).setValues([row]);
+  else sh.appendRow(row);
+}
+
+function saveProjectFile_(name, jsonStr, existingId) {
+  const folder = getFolder_();
+  let file = null;
+  if (existingId) {
+    try { file = DriveApp.getFileById(existingId); } catch(e){}
+  }
+  const fname = 'Proyek - ' + name + '.studio.json';
+  if (file) {
+    file.setContent(String(jsonStr));
+    file.setName(fname);
+  } else {
+    file = folder.createFile(fname, String(jsonStr), 'application/json');
+  }
+  return file;
+}
+
+function getLibraryItems_(ss) {
+  const sh = ss.getSheetByName(LIST_SHEET);
+  const last = sh.getLastRow();
+  if (last < 2) return [];
+  const tz = ss.getSpreadsheetTimeZone();
+  return sh.getRange(2, 1, last - 1, 8).getValues().map(function(r) {
+    return {
+      date: r[0] instanceof Date ? Utilities.formatDate(r[0], tz, 'dd MMM yyyy HH:mm') : String(r[0]),
+      type: r[1], name: r[2], scenes: r[3], duration: r[4], size: r[5], url: r[6], id: r[7]
+    };
+  }).reverse();
+}
+
+function deleteEntry_(ss, id) {
+  try {
+    const file = DriveApp.getFileById(id);
+    file.setTrashed(true);
+  } catch(e){}
+  const sh = ss.getSheetByName(LIST_SHEET);
+  const hit = sh.createTextFinder(id).matchEntireCell(true).findNext();
+  if (hit) sh.deleteRow(hit.getRow());
+}
+`;
+
+export function getSavedWebhookUrl(): string {
+  try {
+    return localStorage.getItem(STORAGE_KEY_WEBHOOK) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function saveWebhookUrl(url: string): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_WEBHOOK, url.trim());
+  } catch {}
+}
+
+export function getSavedSheetUrl(): string {
+  try {
+    return localStorage.getItem(STORAGE_KEY_SHEET) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function saveSheetUrl(url: string): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_SHEET, url.trim());
+  } catch {}
+}
+
+// Send request to Webhook / Apps Script Web App Endpoint
+export async function sendWebhookRequest(action: string, payload: Record<string, unknown> = {}): Promise<any> {
+  const webhookUrl = getSavedWebhookUrl();
+  if (!webhookUrl) {
+    throw new Error('URL Webhook / Google Apps Script belum diisi');
+  }
+
+  const res = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8', // Apps Script accepts text/plain to avoid CORS preflight options
+    },
+    body: JSON.stringify({ action, ...payload }),
+  });
+
+  const text = await res.text();
+  let data: any = {};
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('Respon Webhook bukan format JSON yang valid');
+  }
+
+  if (data.success === false) {
+    throw new Error(data.error || 'Gagal mengeksekusi aksi Webhook Sheet');
+  }
+
+  if (data.sheetUrl) {
+    saveSheetUrl(data.sheetUrl);
+  }
+
+  return data;
+}
+
+// Firebase Auth Login
 export const initGoogleAuth = (
   onAuthSuccess?: (user: User, token: string) => void,
   onAuthFailure?: () => void
@@ -43,6 +233,13 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     }
     cachedAccessToken = credential.accessToken;
     return { user: result.user, accessToken: cachedAccessToken };
+  } catch (err: any) {
+    if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain')) {
+      throw new Error(
+        'Domain preview belum diotorisasi di Firebase. Gunakan koneksi "URL Webhook Google Sheet" langsung tanpa login popup!'
+      );
+    }
+    throw err;
   } finally {
     isSigningIn = false;
   }
@@ -57,7 +254,7 @@ export const getGoogleAccessToken = (): string | null => {
   return cachedAccessToken;
 };
 
-// ================= GOOGLE DRIVE API =================
+// ================= GOOGLE DRIVE API & WEBHOOK WRAPPERS =================
 const FOLDER_NAME = 'Studio Suara AI';
 const SPREADSHEET_NAME = 'Studio Suara AI - Daftar File';
 const LIST_SHEET = 'Daftar File';
@@ -68,9 +265,8 @@ let cachedSpreadsheetId: string | null = null;
 export async function getOrCreateFolder(): Promise<string> {
   if (cachedFolderId) return cachedFolderId;
   const token = getGoogleAccessToken();
-  if (!token) throw new Error('Silakan masuk dengan akun Google terlebih dahulu');
+  if (!token) throw new Error('Silakan masuk dengan akun Google atau gunakan Webhook Sheet');
 
-  // Search folder
   const query = encodeURIComponent(`name = '${FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
   const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name)`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -81,7 +277,6 @@ export async function getOrCreateFolder(): Promise<string> {
     return cachedFolderId!;
   }
 
-  // Create folder
   const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST',
     headers: {
@@ -101,15 +296,31 @@ export async function getOrCreateFolder(): Promise<string> {
 export async function saveProjectJsonToDrive(
   projectId: string | null,
   projectName: string,
-  jsonContent: string
+  jsonContent: string,
+  sceneCount = 0,
+  durationSec = 0
 ): Promise<{ fileId: string; url: string }> {
+  const webhookUrl = getSavedWebhookUrl();
+  if (webhookUrl) {
+    const res = await sendWebhookRequest('saveProject', {
+      name: projectName,
+      json: jsonContent,
+      projectId,
+      scenes: sceneCount,
+      duration: durationSec,
+    });
+    return {
+      fileId: res.fileId,
+      url: res.url,
+    };
+  }
+
   const token = getGoogleAccessToken();
-  if (!token) throw new Error('Silakan masuk dengan akun Google terlebih dahulu');
+  if (!token) throw new Error('Gunakan koneksi Webhook Google Sheet atau login Google');
   const folderId = await getOrCreateFolder();
   const fileName = `Proyek - ${projectName}.studio.json`;
 
   if (projectId) {
-    // Update existing file
     const updateRes = await fetch(
       `https://www.googleapis.com/upload/drive/v3/files/${projectId}?uploadType=media`,
       {
@@ -129,7 +340,6 @@ export async function saveProjectJsonToDrive(
     }
   }
 
-  // Create new project file
   const metadata = {
     name: fileName,
     parents: [folderId],
@@ -137,10 +347,7 @@ export async function saveProjectJsonToDrive(
   };
 
   const form = new FormData();
-  form.append(
-    'metadata',
-    new Blob([JSON.stringify(metadata)], { type: 'application/json' })
-  );
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
   form.append('file', new Blob([jsonContent], { type: 'application/json' }));
 
   const res = await fetch(
@@ -164,7 +371,7 @@ export async function uploadExportFileToDrive(
   fileName: string
 ): Promise<{ fileId: string; url: string }> {
   const token = getGoogleAccessToken();
-  if (!token) throw new Error('Silakan masuk dengan akun Google terlebih dahulu');
+  if (!token) throw new Error('Silakan hubungkan akun Google untuk menyimpan file ekspor ke Drive');
   const folderId = await getOrCreateFolder();
 
   const metadata = {
@@ -174,10 +381,7 @@ export async function uploadExportFileToDrive(
   };
 
   const form = new FormData();
-  form.append(
-    'metadata',
-    new Blob([JSON.stringify(metadata)], { type: 'application/json' })
-  );
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
   form.append('file', blob);
 
   const res = await fetch(
@@ -207,6 +411,12 @@ export async function fetchProjectFromDrive(fileId: string): Promise<string> {
 }
 
 export async function trashDriveFile(fileId: string): Promise<void> {
+  const webhookUrl = getSavedWebhookUrl();
+  if (webhookUrl) {
+    await sendWebhookRequest('deleteEntry', { id: fileId });
+    return;
+  }
+
   const token = getGoogleAccessToken();
   if (!token) throw new Error('Silakan masuk dengan akun Google terlebih dahulu');
   await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
@@ -219,7 +429,7 @@ export async function trashDriveFile(fileId: string): Promise<void> {
   });
 }
 
-// ================= GOOGLE SHEETS API =================
+// ================= GOOGLE SHEETS API & WEBHOOK CATALOG =================
 export interface CatalogItem {
   date: string;
   type: string;
@@ -239,9 +449,8 @@ export async function getOrCreateSpreadsheet(): Promise<{ id: string; url: strin
     };
   }
   const token = getGoogleAccessToken();
-  if (!token) throw new Error('Silakan masuk dengan akun Google terlebih dahulu');
+  if (!token) throw new Error('Silakan masuk dengan akun Google');
 
-  // Search existing sheet
   const query = encodeURIComponent(`name = '${SPREADSHEET_NAME}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`);
   const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,webViewLink)`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -255,7 +464,6 @@ export async function getOrCreateSpreadsheet(): Promise<{ id: string; url: strin
     };
   }
 
-  // Create new spreadsheet
   const folderId = await getOrCreateFolder();
   const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
     method: 'POST',
@@ -271,13 +479,11 @@ export async function getOrCreateSpreadsheet(): Promise<{ id: string; url: strin
   const newSheet = await createRes.json();
   const sheetId = newSheet.spreadsheetId;
 
-  // Move to folder
   await fetch(`https://www.googleapis.com/drive/v3/files/${sheetId}?addParents=${folderId}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  // Add header row
   await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${LIST_SHEET}!A1:H1:append?valueInputOption=USER_ENTERED`, {
     method: 'POST',
     headers: {
@@ -305,6 +511,19 @@ export async function registerEntryInSheet(entry: {
   driveUrl: string;
   fileId: string;
 }): Promise<void> {
+  const webhookUrl = getSavedWebhookUrl();
+  if (webhookUrl) {
+    await sendWebhookRequest('registerFile', {
+      type: entry.type,
+      name: entry.name,
+      scenes: entry.scenes,
+      duration: entry.duration,
+      size: entry.sizeMB,
+      fileId: entry.fileId,
+    });
+    return;
+  }
+
   const token = getGoogleAccessToken();
   if (!token) return;
   const sheet = await getOrCreateSpreadsheet();
@@ -338,8 +557,17 @@ export async function registerEntryInSheet(entry: {
 }
 
 export async function fetchCatalogFromSheet(): Promise<{ items: CatalogItem[]; sheetUrl: string }> {
+  const webhookUrl = getSavedWebhookUrl();
+  if (webhookUrl) {
+    const res = await sendWebhookRequest('getLibrary');
+    return {
+      items: res.items || [],
+      sheetUrl: res.sheetUrl || getSavedSheetUrl() || 'https://docs.google.com/spreadsheets/',
+    };
+  }
+
   const token = getGoogleAccessToken();
-  if (!token) return { items: [], sheetUrl: '' };
+  if (!token) return { items: [], sheetUrl: getSavedSheetUrl() };
   const sheet = await getOrCreateSpreadsheet();
 
   const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheet.id}/values/${LIST_SHEET}!A2:H50`, {

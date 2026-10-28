@@ -1,6 +1,12 @@
-import React, { useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { ProjectMetadata } from '../types';
-import { CatalogItem } from '../services/googleWorkspace';
+import {
+  CatalogItem,
+  getSavedWebhookUrl,
+  saveWebhookUrl,
+  getSavedSheetUrl,
+  DEFAULT_APPS_SCRIPT_CODE,
+} from '../services/googleWorkspace';
 import {
   X,
   Plus,
@@ -13,6 +19,9 @@ import {
   FileSpreadsheet,
   Check,
   RefreshCw,
+  Code,
+  Copy,
+  Link as LinkIcon,
 } from 'lucide-react';
 
 interface ProjectModalProps {
@@ -62,8 +71,25 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   onDeleteDriveEntry,
 }) => {
   const jsonInputRef = useRef<HTMLInputElement>(null);
+  const [webhookInput, setWebhookInput] = useState<string>(getSavedWebhookUrl());
+  const [isWebhookActive, setIsWebhookActive] = useState<boolean>(!!getSavedWebhookUrl());
+  const [showScriptBox, setShowScriptBox] = useState<boolean>(false);
+  const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
   if (!isOpen) return null;
+
+  const handleSaveWebhook = () => {
+    saveWebhookUrl(webhookInput);
+    setIsWebhookActive(!!webhookInput.trim());
+    onRefreshDriveCatalog();
+  };
+
+  const handleCopyScript = () => {
+    navigator.clipboard.writeText(DEFAULT_APPS_SCRIPT_CODE).then(() => {
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    });
+  };
 
   const formatDuration = (sec: number | string) => {
     const num = Number(sec) || 0;
@@ -82,6 +108,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       minute: '2-digit',
     });
   };
+
+  const activeSheetUrl = sheetsUrl || getSavedSheetUrl() || 'https://docs.google.com/spreadsheets/';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
@@ -126,25 +154,126 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             </button>
           </div>
 
-          {/* Google Workspace Drive & Sheets Integration Card */}
-          <div className="p-3 bg-[#0b121b] border border-[#26364a] rounded-xl flex flex-col gap-2.5">
+          {/* Google Workspace & Webhook Sheet Integration Card */}
+          <div className="p-3.5 bg-[#0b121b] border border-[#26364a] rounded-xl flex flex-col gap-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <Cloud size={15} className="text-[#4285F4]" />
-                <span className="font-semibold text-xs">Pustaka Google Drive & Sheets</span>
-                {googleUser && (
+                <Cloud size={16} className="text-[#4285F4]" />
+                <span className="font-bold text-xs text-[#e9eef4]">Koneksi Google Sheet & Drive</span>
+                {isWebhookActive ? (
+                  <span className="text-[10px] bg-[#2fb36b]/20 text-[#2fb36b] border border-[#2fb36b]/30 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                    <Check size={11} />
+                    <span>Webhook Sheet Terhubung</span>
+                  </span>
+                ) : googleUser ? (
                   <span className="text-[10px] bg-[#2fb36b]/20 text-[#2fb36b] px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                     <Check size={11} />
                     <span>Terhubung: {googleUser.email}</span>
                   </span>
-                )}
+                ) : null}
               </div>
 
-              {!googleUser ? (
+              <div className="flex items-center gap-2">
+                <a
+                  href={activeSheetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-[#1f2d3e] hover:bg-[#26364a] border border-[#26364a] rounded-lg font-medium text-xs text-[#2fb36b] transition-colors"
+                >
+                  <FileSpreadsheet size={13} />
+                  <span>Buka Google Sheets</span>
+                  <ExternalLink size={11} />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={onRefreshDriveCatalog}
+                  className="p-1.5 bg-[#1f2d3e] hover:bg-[#26364a] border border-[#26364a] rounded-lg text-[#8fa1b4]"
+                  title="Perbarui daftar file dari Google Sheets"
+                >
+                  <RefreshCw size={13} />
+                </button>
+              </div>
+            </div>
+
+            {/* Direct Webhook URL Connection Input (Solves Unauthorized Domain error completely!) */}
+            <div className="flex flex-col gap-1.5 p-2.5 bg-[#16212e] border border-[#26364a] rounded-lg">
+              <label className="block text-[11px] text-[#8fa1b4] font-medium flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <LinkIcon size={12} className="text-[#e0b44c]" />
+                  <span>URL Webhook Google Sheet / Apps Script Web App (Instan & Tanpa Popup Error)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowScriptBox(!showScriptBox)}
+                  className="text-[10px] text-[#e0b44c] hover:underline flex items-center gap-1"
+                >
+                  <Code size={11} />
+                  <span>{showScriptBox ? 'Sembunyikan Kode Script' : 'Salin Kode Webhook Google Sheets'}</span>
+                </button>
+              </label>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={webhookInput}
+                  onChange={(e) => setWebhookInput(e.target.value)}
+                  placeholder="https://script.google.com/macros/s/.../exec"
+                  className="flex-1 bg-[#0b121b] border border-[#26364a] rounded-lg px-3 py-1.5 text-xs text-[#e9eef4] outline-none font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveWebhook}
+                  className="px-3 py-1.5 bg-[#e0b44c] hover:bg-[#f3ca6a] text-[#1a1405] rounded-lg font-bold text-xs shadow-sm shrink-0"
+                >
+                  Hubungkan Webhook
+                </button>
+              </div>
+
+              {/* Expandable Google Apps Script Code Box */}
+              {showScriptBox && (
+                <div className="mt-2 p-3 bg-[#0b121b] border border-[#26364a] rounded-lg flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-[#8fa1b4]">
+                      Kode Google Apps Script (Satu Klik untuk Google Sheets Anda)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyScript}
+                      className="flex items-center gap-1 px-2 py-1 bg-[#1f2d3e] hover:bg-[#26364a] border border-[#26364a] rounded text-[10px] font-semibold text-[#e0b44c]"
+                    >
+                      {copiedCode ? <Check size={11} className="text-[#2fb36b]" /> : <Copy size={11} />}
+                      <span>{copiedCode ? 'Kode Tersalin!' : 'Salin Semua Kode'}</span>
+                    </button>
+                  </div>
+                  <pre className="text-[10px] text-[#8fa1b4] bg-[#050810] p-2.5 rounded border border-[#1d2a3a] max-h-40 overflow-y-auto font-mono scrollbar-thin">
+                    {DEFAULT_APPS_SCRIPT_CODE}
+                  </pre>
+                  <p className="text-[10px] text-[#8fa1b4] leading-relaxed">
+                    <strong>Cara Pasang:</strong> Buka Google Sheets Anda &rarr; Ekstensi &rarr; Apps Script &rarr; Tempel kode ini &rarr; Klik "Terapkan" &rarr; "Penerapan Baru" &rarr; Pilih "Aplikasi Web", Akses "Siapa Saja". Salin URL hasilnya ke kolom di atas!
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={isSavingToDrive}
+                onClick={onSaveToDrive}
+                className="flex-1 py-2 px-3 bg-[#1f2d3e] hover:bg-[#26364a] border border-[#e0b44c] rounded-lg font-bold text-xs text-[#e0b44c] flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                <Upload size={13} />
+                <span>{isSavingToDrive ? 'Menyimpan ke Sheet...' : 'Simpan Proyek Aktif ke Drive & Sheet'}</span>
+              </button>
+
+              {!googleUser && (
                 <button
                   type="button"
                   onClick={onGoogleSignIn}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1f2d3e] hover:bg-[#26364a] border border-[#26364a] hover:border-[#4285F4] rounded-lg font-semibold text-xs transition-colors"
+                  className="py-2 px-3 bg-[#1f2d3e] hover:bg-[#26364a] border border-[#26364a] hover:border-[#4285F4] rounded-lg font-semibold text-xs flex items-center gap-1.5"
+                  title="Opsi alternatif: Masuk via Firebase Google Auth"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 48 48">
                     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
@@ -152,47 +281,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                     <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
                     <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
                   </svg>
-                  <span>Masuk dengan Google</span>
+                  <span>Google Auth (Opsional)</span>
                 </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={isSavingToDrive}
-                    onClick={onSaveToDrive}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1f2d3e] hover:bg-[#26364a] border border-[#26364a] hover:border-[#e0b44c] rounded-lg font-semibold text-xs text-[#e0b44c] transition-colors disabled:opacity-50"
-                  >
-                    <Upload size={12} />
-                    <span>{isSavingToDrive ? 'Menyimpan...' : 'Simpan Proyek ke Drive'}</span>
-                  </button>
-
-                  {sheetsUrl && (
-                    <a
-                      href={sheetsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2.5 py-1.5 bg-[#1f2d3e] hover:bg-[#26364a] border border-[#26364a] rounded-lg font-medium text-xs text-[#2fb36b] transition-colors"
-                    >
-                      <FileSpreadsheet size={13} />
-                      <span>Buka Sheets</span>
-                      <ExternalLink size={11} />
-                    </a>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={onRefreshDriveCatalog}
-                    className="p-1.5 bg-[#1f2d3e] hover:bg-[#26364a] border border-[#26364a] rounded-lg text-[#8fa1b4]"
-                    title="Perbarui daftar dari Google Sheets"
-                  >
-                    <RefreshCw size={13} />
-                  </button>
-                </div>
               )}
             </div>
 
-            {/* Drive / Sheets Catalog Table if connected */}
-            {googleUser && driveCatalog.length > 0 && (
+            {/* Drive / Sheets Catalog Table */}
+            {driveCatalog.length > 0 && (
               <div className="border border-[#26364a] rounded-lg overflow-hidden bg-[#101824] mt-1">
                 <table className="w-full text-left border-collapse text-[11px]">
                   <thead>
