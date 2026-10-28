@@ -1,0 +1,6 @@
+{
+  "name": "CineSlide Studio AI",
+  "description": "Studio Suara & Video AI dengan kloning suara, avatar 3D/2D, 50 tema visual, animasi foto, timeline dubbing video, synthesizer suara atmosfer, serta ekspor PPTX dan video.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
