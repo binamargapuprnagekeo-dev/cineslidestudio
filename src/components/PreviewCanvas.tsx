@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { Play, Square, Maximize, Subtitles, Volume2 } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { Play, Square, Maximize, Subtitles } from 'lucide-react';
 
 interface PreviewCanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -29,21 +29,51 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
   isStatusError,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
 
   const handleFullscreen = () => {
-    if (!canvasRef.current) return;
-    const elem = canvasRef.current;
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen().catch(() => {});
-    } else if ((elem as unknown as { webkitRequestFullscreen?: () => void }).webkitRequestFullscreen) {
-      (elem as unknown as { webkitRequestFullscreen: () => void }).webkitRequestFullscreen();
+    const target = canvasRef.current?.parentElement || canvasRef.current;
+    if (!target) return;
+
+    if (!isPlayingRef.current) {
+      onPlayAllScenes();
+    }
+
+    if (target.requestFullscreen) {
+      target.requestFullscreen().catch(() => {});
+    } else if ((target as unknown as { webkitRequestFullscreen?: () => void }).webkitRequestFullscreen) {
+      (target as unknown as { webkitRequestFullscreen: () => void }).webkitRequestFullscreen();
     }
   };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const fsElement =
+        document.fullscreenElement ||
+        (document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement ||
+        (document as unknown as { mozFullScreenElement?: Element }).mozFullScreenElement;
+
+      if (fsElement && !isPlayingRef.current) {
+        onPlayAllScenes();
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+    };
+  }, [onPlayAllScenes]);
 
   return (
     <div ref={containerRef} className="flex flex-col gap-3 w-full">
       {/* 16:9 Canvas Viewport */}
-      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-[#26364a] shadow-xl group">
+      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-[#26364a] shadow-xl group flex items-center justify-center [&:fullscreen]:w-full [&:fullscreen]:h-full [&:fullscreen]:bg-black [&:fullscreen]:rounded-none [&:fullscreen]:border-none [&:-webkit-full-screen]:w-full [&:-webkit-full-screen]:h-full [&:-webkit-full-screen]:bg-black">
         <canvas
           ref={canvasRef}
           width={1280}
@@ -53,9 +83,9 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
         />
 
         {isPlaying && (
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-md border border-white/10 text-[11px] text-[#2fb36b] font-medium">
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-md border border-white/10 text-[11px] text-[#2fb36b] font-medium z-10">
             <span className="w-2 h-2 rounded-full bg-[#2fb36b] animate-ping" />
-            <span>Sedang Memutar...</span>
+            <span>Sedang Memutar Layar Penuh...</span>
           </div>
         )}
       </div>
@@ -96,7 +126,7 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
           type="button"
           onClick={handleFullscreen}
           className="flex items-center gap-1.5 px-3 py-1.5 font-semibold rounded-lg bg-[#1f2d3e] border border-[#26364a] text-[#8fa1b4] hover:text-[#e9eef4] hover:bg-[#26364a] transition-colors"
-          title="Buka layar penuh"
+          title="Buka layar penuh (Slide berjalan otomatis)"
         >
           <Maximize size={14} />
           <span>Layar Penuh</span>
@@ -146,3 +176,4 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
     </div>
   );
 };
+

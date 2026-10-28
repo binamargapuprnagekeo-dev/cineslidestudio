@@ -5,6 +5,9 @@ import {
   PHOTO_PRESETS,
   DRAMA_SOUNDSCAPES,
   OVERLAY_MODELS,
+  SLIDE_IMAGE_MODELS,
+  TRANSITION_MODES,
+  JEDAG_JEDUG_STYLES,
 } from '../constants/presets';
 import {
   Sliders,
@@ -312,6 +315,67 @@ export const InspectorTabs: React.FC<InspectorTabsProps> = ({
               </div>
             )}
 
+            {/* 35 Slide Transition Modes Selector */}
+            <div className="p-3 bg-[#0b121b] border border-[#26364a] rounded-lg flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-[11px] text-[#e0b44c] font-bold uppercase tracking-wider">
+                  Mode Peralihan Adegan (35 Mode Transisi)
+                </label>
+                <span className="text-[10px] text-[#8fa1b4] font-medium">
+                  {TRANSITION_MODES[scene.tr || 0]?.category}
+                </span>
+              </div>
+              <select
+                value={scene.tr || 0}
+                onChange={(e) => onUpdateScene({ tr: Number(e.target.value) })}
+                className="w-full bg-[#16212e] border border-[#26364a] rounded-lg px-2.5 py-2 text-xs text-[#e9eef4] outline-none"
+              >
+                {TRANSITION_MODES.map((tm) => (
+                  <option key={tm.id} value={tm.id}>
+                    {tm.id + 1}. [{tm.category}] {tm.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* CapCut / TikTok / Vameo Jedag-Jedug Viral Beat Card */}
+            <div className="p-3 bg-[#0b121b] border border-[#26364a] rounded-lg flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={!!scene.jj}
+                    onChange={(e) => onUpdateScene({ jj: e.target.checked })}
+                    className="accent-[#e0b44c]"
+                  />
+                  <span className="text-[11px] text-[#e0b44c] font-bold uppercase tracking-wider">
+                    Efek Jedag-Jedug Viral (CapCut/TikTok)
+                  </span>
+                </label>
+                <Sparkles size={13} className={scene.jj ? 'text-[#e0b44c] animate-pulse' : 'text-[#6b7a8a]'} />
+              </div>
+
+              {scene.jj && (
+                <div className="flex flex-col gap-2 pt-1 border-t border-[#26364a]/60">
+                  <label className="block text-[10px] text-[#8fa1b4]">Model Animasi Beat Jedag-Jedug</label>
+                  <select
+                    value={scene.jjStyle || 0}
+                    onChange={(e) => onUpdateScene({ jjStyle: Number(e.target.value) })}
+                    className="w-full bg-[#16212e] border border-[#26364a] rounded-lg px-2.5 py-1.5 text-xs text-[#e9eef4] outline-none"
+                  >
+                    {JEDAG_JEDUG_STYLES.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.id + 1}. {st.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-[#8fa1b4] italic">
+                    {JEDAG_JEDUG_STYLES[scene.jjStyle || 0]?.desc}
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* General Tampilan settings */}
             <div className="flex flex-col gap-2 pt-2 border-t border-[#26364a]/50">
               <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -353,19 +417,172 @@ export const InspectorTabs: React.FC<InspectorTabsProps> = ({
 
             <div>
               <label className="block text-[11px] text-[#8fa1b4] font-medium mb-1">
-                Isi Slide (Satu baris = satu poin)
+                Isi Slide / Paragraf Teks (Mendukung Teks Panjang)
               </label>
               <textarea
                 value={scene.body}
                 onChange={(e) => onUpdateScene({ body: e.target.value })}
-                rows={6}
-                placeholder="Poin pertama&#10;Poin kedua&#10;Poin ketiga..."
-                className="w-full bg-[#0b121b] border border-[#26364a] rounded-lg p-3 text-xs text-[#e9eef4] outline-none font-sans"
+                rows={8}
+                placeholder="Tuliskan paragraf teks panjang atau poin-poin presentasi di sini...&#10;• Poin pertama&#10;• Poin kedua..."
+                className="w-full bg-[#0b121b] border border-[#26364a] rounded-lg p-3 text-xs text-[#e9eef4] outline-none font-sans leading-relaxed"
               />
               <p className="text-[11px] text-[#8fa1b4] mt-1 leading-relaxed">
-                Ketik <code className="text-[#e0b44c]">---</code> di baris tersendiri untuk membuat halaman tambahan otomatis.
-                Untuk tata letak Angka, tulis: <code className="text-[#e0b44c]">85% | Kepuasan Pengguna</code>.
+                Ketik <code className="text-[#e0b44c]">---</code> di baris tersendiri untuk memecah slide otomatis. Teks panjang otomatis diperkecil agar pas pada layar.
               </p>
+            </div>
+
+            {/* PowerPoint-Style Formatting Controls Card */}
+            <div className="p-3 bg-[#0b121b] border border-[#26364a] rounded-lg flex flex-col gap-3">
+              <label className="block text-[11px] text-[#e0b44c] font-bold uppercase tracking-wider">
+                Pengaturan Teks Ala PowerPoint
+              </label>
+
+              {/* Row 1: Font Size & Font Weight */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] text-[#8fa1b4] mb-1">Ukuran Font</label>
+                  <select
+                    value={scene.fontSize ?? 1.0}
+                    onChange={(e) => onUpdateScene({ fontSize: Number(e.target.value) })}
+                    className="w-full bg-[#16212e] border border-[#26364a] rounded-lg px-2 py-1.5 text-xs outline-none"
+                  >
+                    <option value={0.75}>Sangat Kecil (0.75x)</option>
+                    <option value={0.9}>Kecil (0.9x)</option>
+                    <option value={1.0}>Normal (1.0x)</option>
+                    <option value={1.25}>Besar (1.25x)</option>
+                    <option value={1.5}>Sangat Besar (1.5x)</option>
+                    <option value={2.0}>Ekstra Besar (2.0x)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-[#8fa1b4] mb-1">Ketebalan Font</label>
+                  <select
+                    value={scene.fontWeight ?? 600}
+                    onChange={(e) => onUpdateScene({ fontWeight: Number(e.target.value) })}
+                    className="w-full bg-[#16212e] border border-[#26364a] rounded-lg px-2 py-1.5 text-xs outline-none"
+                  >
+                    <option value={400}>Regular (400)</option>
+                    <option value={500}>Medium (500)</option>
+                    <option value={600}>Semibold (600)</option>
+                    <option value={700}>Bold (700)</option>
+                    <option value={800}>Heavy (800)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Alignment Buttons & Line Height */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] text-[#8fa1b4] mb-1">Rataan Teks</label>
+                  <div className="flex border border-[#26364a] rounded-lg overflow-hidden bg-[#16212e]">
+                    {[
+                      { id: 'left', label: 'Kiri' },
+                      { id: 'center', label: 'Tengah' },
+                      { id: 'right', label: 'Kanan' },
+                      { id: 'justify', label: 'Rata' },
+                    ].map((align) => (
+                      <button
+                        key={align.id}
+                        type="button"
+                        onClick={() =>
+                          onUpdateScene({
+                            fontAlign: align.id as 'left' | 'center' | 'right' | 'justify',
+                          })
+                        }
+                        className={`flex-1 py-1.5 text-[10px] font-semibold transition-colors ${
+                          (scene.fontAlign || 'left') === align.id
+                            ? 'bg-[#e0b44c] text-[#1a1405]'
+                            : 'text-[#8fa1b4] hover:text-white'
+                        }`}
+                      >
+                        {align.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-[#8fa1b4] mb-1">Jarak Baris (Spacing)</label>
+                  <select
+                    value={scene.lineHeight ?? 1.3}
+                    onChange={(e) => onUpdateScene({ lineHeight: Number(e.target.value) })}
+                    className="w-full bg-[#16212e] border border-[#26364a] rounded-lg px-2 py-1.5 text-xs outline-none"
+                  >
+                    <option value={1.1}>Rapat (1.1x)</option>
+                    <option value={1.3}>Normal (1.3x)</option>
+                    <option value={1.6}>Renggang (1.6x)</option>
+                    <option value={1.9}>Sangat Renggang (1.9x)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 3: Text Box Card Backplate & Multi-Column Layout */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] text-[#8fa1b4] mb-1">Kotak Latar Teks (Box)</label>
+                  <select
+                    value={scene.boxBg || 'none'}
+                    onChange={(e) =>
+                      onUpdateScene({
+                        boxBg: e.target.value as 'none' | 'glass' | 'dark' | 'light',
+                      })
+                    }
+                    className="w-full bg-[#16212e] border border-[#26364a] rounded-lg px-2 py-1.5 text-xs outline-none"
+                  >
+                    <option value="none">Tanpa Kotak</option>
+                    <option value="glass">Kartu Kaca (Frosted Glass)</option>
+                    <option value="dark">Kartu Gelap (Kontras)</option>
+                    <option value="light">Kartu Terang</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-[#8fa1b4] mb-1">Penataan Kolom</label>
+                  <select
+                    value={scene.cols || 1}
+                    onChange={(e) =>
+                      onUpdateScene({
+                        cols: Number(e.target.value) as 1 | 2 | 3,
+                      })
+                    }
+                    className="w-full bg-[#16212e] border border-[#26364a] rounded-lg px-2 py-1.5 text-xs outline-none"
+                  >
+                    <option value={1}>1 Kolom (Penuh)</option>
+                    <option value={2}>2 Kolom Seimbang</option>
+                    <option value={3}>3 Kolom Paragraf</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 4: Custom Text Color Picker */}
+              <div>
+                <label className="block text-[10px] text-[#8fa1b4] mb-1">Warna Teks Kustom</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={scene.textColor || '#ffffff'}
+                    onChange={(e) => onUpdateScene({ textColor: e.target.value })}
+                    className="w-8 h-8 rounded-lg bg-transparent border border-[#26364a] cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={scene.textColor || ''}
+                    onChange={(e) => onUpdateScene({ textColor: e.target.value })}
+                    placeholder="Bawaan Tema (Default)"
+                    className="flex-1 bg-[#16212e] border border-[#26364a] rounded-lg px-2.5 py-1.5 text-xs outline-none font-mono"
+                  />
+                  {scene.textColor && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateScene({ textColor: '' })}
+                      className="px-2 py-1.5 bg-[#16212e] border border-[#26364a] rounded-lg text-[10px] text-[#8fa1b4] hover:text-white"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -423,11 +640,94 @@ export const InspectorTabs: React.FC<InspectorTabsProps> = ({
               </div>
             </div>
 
+            {/* 35 Slide Image Insertion Models */}
+            <div className="p-3 bg-[#0b121b] border border-[#26364a] rounded-lg flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] text-[#8fa1b4] font-medium">
+                  Gambar Sisipan pada Tema Slide ({scene.ov?.length || 0}/3)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => overlayInputRef.current?.click()}
+                  disabled={(scene.ov?.length || 0) >= 3}
+                  className="flex items-center gap-1 text-[11px] px-2 py-1 bg-[#1f2d3e] border border-[#26364a] rounded-lg text-[#e9eef4] hover:bg-[#26364a] disabled:opacity-40"
+                >
+                  <Plus size={11} className="text-[#e0b44c]" />
+                  <span>+ Sisipkan Gambar</span>
+                </button>
+                <input
+                  ref={overlayInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      const img = new Image();
+                      const url = URL.createObjectURL(f);
+                      img.src = url;
+                      const newOv = [...(scene.ov || []), { el: img, type: 'img' as const, dataUrl: url, file: f }];
+                      onUpdateScene({ ov: newOv });
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </div>
+
+              {/* Inserted Image Thumbnails */}
+              {scene.ov && scene.ov.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {scene.ov.map((imgItem, k) => (
+                    <div key={k} className="relative group w-14 h-11 rounded-lg overflow-hidden border border-[#26364a]">
+                      <img src={imgItem.dataUrl || ''} alt="" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = scene.ov?.filter((_, idx) => idx !== k);
+                          onUpdateScene({ ov: updated });
+                        }}
+                        className="absolute inset-0 bg-red-600/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 35 Models Selector */}
+              <div>
+                <label className="block text-[10px] text-[#8fa1b4] mb-1">
+                  Model Tampilan Gambar Sisipan (35 Pilihan)
+                </label>
+                <select
+                  value={scene.ovs || 0}
+                  onChange={(e) => onUpdateScene({ ovs: Number(e.target.value) })}
+                  className="w-full bg-[#16212e] border border-[#26364a] rounded-lg px-2.5 py-1.5 text-xs outline-none"
+                >
+                  {SLIDE_IMAGE_MODELS.map((m, idx) => (
+                    <option key={idx} value={idx}>
+                      {idx + 1}. {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {scene.bg && scene.bg.type === 'vid' && (
-              <div className="p-3 bg-[#0b121b] border border-[#26364a] rounded-lg flex flex-col gap-2.5">
+              <div className="p-3 bg-[#0b121b] border border-[#26364a] rounded-lg flex flex-col gap-3">
+                <div className="flex items-center justify-between border-b border-[#26364a]/60 pb-1.5">
+                  <label className="text-[11px] text-[#e0b44c] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <Scissors size={13} />
+                    <span>Editor Pemotong & Kecepatan Video</span>
+                  </label>
+                  <span className="text-[10px] text-[#8fa1b4]">Format Klip Dubbing</span>
+                </div>
+
+                {/* Start & Duration handles */}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] text-[#8fa1b4] mb-1">Mulai Klip (detik)</label>
+                    <label className="block text-[10px] text-[#8fa1b4] mb-1">Mulai Potongan (detik)</label>
                     <input
                       type="number"
                       step="0.5"
@@ -438,7 +738,7 @@ export const InspectorTabs: React.FC<InspectorTabsProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-[#8fa1b4] mb-1">Durasi (0 = ikut narasi)</label>
+                    <label className="block text-[10px] text-[#8fa1b4] mb-1">Durasi Klip (0 = Ikut Narasi)</label>
                     <input
                       type="number"
                       step="0.5"
@@ -450,17 +750,36 @@ export const InspectorTabs: React.FC<InspectorTabsProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] text-[#8fa1b4] mb-1">Suara Asli Video</label>
-                  <select
-                    value={scene.va || 'mute'}
-                    onChange={(e) => onUpdateScene({ va: e.target.value as 'mute' | 'low' | 'full' })}
-                    className="w-full bg-[#16212e] border border-[#26364a] rounded-lg px-2.5 py-1.5 text-xs outline-none"
-                  >
-                    <option value="mute">Bisukan (dubbing penuh)</option>
-                    <option value="low">Kecil, di belakang narasi</option>
-                    <option value="full">Normal</option>
-                  </select>
+                {/* Video Speed Multiplier */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-[#8fa1b4] mb-1">Kecepatan Putar Video</label>
+                    <select
+                      value={scene.gs || 1}
+                      onChange={(e) => onUpdateScene({ gs: Number(e.target.value) })}
+                      className="w-full bg-[#16212e] border border-[#26364a] rounded-lg px-2 py-1.5 text-xs outline-none"
+                    >
+                      <option value={0.5}>0.5x (Lambat / Slowmo)</option>
+                      <option value={0.75}>0.75x (Sedikit Lambat)</option>
+                      <option value={1}>1.0x (Normal)</option>
+                      <option value={1.25}>1.25x (Sedikit Cepat)</option>
+                      <option value={1.5}>1.5x (Cepat)</option>
+                      <option value={2}>2.0x (Sangat Cepat)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-[#8fa1b4] mb-1">Suara Asli Video</label>
+                    <select
+                      value={scene.va || 'mute'}
+                      onChange={(e) => onUpdateScene({ va: e.target.value as 'mute' | 'low' | 'full' })}
+                      className="w-full bg-[#16212e] border border-[#26364a] rounded-lg px-2.5 py-1.5 text-xs outline-none"
+                    >
+                      <option value="mute">Bisukan (Dubbing AI Penuh)</option>
+                      <option value="low">Kecil (di belakang narasi)</option>
+                      <option value="full">Normal (Latar Asli)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             )}

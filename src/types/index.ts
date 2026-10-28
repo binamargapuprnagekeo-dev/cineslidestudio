@@ -106,6 +106,20 @@ export interface Scene {
   ov?: PhotoAsset[]; // Overlay foto kecil pada video (maks 3)
   ovs?: number; // Model overlay 0..24
   sg?: VideoSegmentConfig | null; // Pemotong & pengatur kecepatan video
+  // Rich PowerPoint Text Formatting Options
+  fontSize?: number; // Skala ukuran font (0.75, 1.0, 1.25, 1.5, 2.0)
+  fontWeight?: number; // Ketebalan font (400, 600, 700, 800)
+  fontAlign?: 'left' | 'center' | 'right' | 'justify'; // Rataan teks
+  lineHeight?: number; // Jarak antar baris (1.1, 1.3, 1.6, 1.9)
+  textColor?: string; // Warna teks kustom (hex)
+  boxBg?: 'none' | 'glass' | 'dark' | 'light'; // Kartu latar teks PowerPoint
+  cols?: 1 | 2 | 3; // Penataan kolom teks
+  // Extra media & transition enhancements
+  insertedImages?: PhotoAsset[]; // Foto/Gambar sisipan (maks 3)
+  insertedImageModel?: number; // Model sisipan 0..34
+  tr?: number; // Mode peralihan adegan 0..34
+  jj?: boolean; // Aktifkan Efek Jedag-Jedug Beat CapCut/TikTok
+  jjStyle?: number; // Model Jedag-Jedug 0..5
 }
 
 export interface AvatarConfig {

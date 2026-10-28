@@ -1,16 +1,16 @@
 import { ThemeConfig } from '../types';
 
 export const THEMES: ThemeConfig[] = [
-  { n: 'Navy Emas', bg: '#0f1c33', b2: '#1b3358', ink: '#ffffff', ac: '#e0b44c' },
-  { n: 'Putih Bersih', bg: '#f6f8fa', b2: '#dfe8ee', ink: '#13202b', ac: '#1d6b78' },
-  { n: 'Ungu Modern', bg: '#1c1033', b2: '#3a1f6b', ink: '#ffffff', ac: '#ff7ab8' },
-  { n: 'Hijau Alam', bg: '#0f2a22', b2: '#1d4d3c', ink: '#ffffff', ac: '#7fd48a' },
-  { n: 'Merah Elegan', bg: '#2a0f14', b2: '#5a1d27', ink: '#ffffff', ac: '#ff9d7a' },
-  { n: 'Biru Korporat', bg: '#f4f8ff', b2: '#d6e4fb', ink: '#0d2447', ac: '#2563eb' },
-  { n: 'Hitam Minimal', bg: '#0a0a0a', b2: '#1f1f1f', ink: '#f5f5f5', ac: '#00d1b2' },
-  { n: 'Krem Hangat', bg: '#fbf5ea', b2: '#efe0c4', ink: '#3b2a1a', ac: '#c2571a' },
-  { n: 'Teal Segar', bg: '#06323a', b2: '#0c5560', ink: '#ffffff', ac: '#ffd166' },
-  { n: 'Abu Modern', bg: '#eef0f3', b2: '#cfd5dd', ink: '#1c2430', ac: '#e11d48' },
+  { n: 'Navy Emas', bg: '#0f1c33', b2: '#1b3358', ink: '#ffffff', ac: '#e0b44c', art: 'navy' },
+  { n: 'Putih Bersih', bg: '#f6f8fa', b2: '#dfe8ee', ink: '#13202b', ac: '#1d6b78', art: 'putih' },
+  { n: 'Ungu Modern', bg: '#1c1033', b2: '#3a1f6b', ink: '#ffffff', ac: '#ff7ab8', art: 'ungu' },
+  { n: 'Hijau Alam', bg: '#0f2a22', b2: '#1d4d3c', ink: '#ffffff', ac: '#7fd48a', art: 'hijau' },
+  { n: 'Merah Elegan', bg: '#2a0f14', b2: '#5a1d27', ink: '#ffffff', ac: '#ff9d7a', art: 'merah' },
+  { n: 'Biru Korporat', bg: '#f4f8ff', b2: '#d6e4fb', ink: '#0d2447', ac: '#2563eb', art: 'biru' },
+  { n: 'Hitam Minimal', bg: '#0a0a0a', b2: '#1f1f1f', ink: '#f5f5f5', ac: '#00d1b2', art: 'hitam' },
+  { n: 'Krem Hangat', bg: '#fbf5ea', b2: '#efe0c4', ink: '#3b2a1a', ac: '#c2571a', art: 'krem' },
+  { n: 'Teal Segar', bg: '#06323a', b2: '#0c5560', ink: '#ffffff', ac: '#ffd166', art: 'teal' },
+  { n: 'Abu Modern', bg: '#eef0f3', b2: '#cfd5dd', ink: '#1c2430', ac: '#e11d48', art: 'abu' },
   { n: 'Gelombang Biru', bg: '#f7fbff', b2: '#d9e8fb', ink: '#0d2447', ac: '#2563eb', art: 'wave' },
   { n: 'Pegunungan Senja', bg: '#1a1838', b2: '#8b4f7a', ink: '#ffffff', ac: '#ffb38a', art: 'mount' },
   { n: 'Bulatan Pastel', bg: '#fbf6ef', b2: '#f4c7b4', ink: '#33291f', ac: '#e07a5f', art: 'circ' },
@@ -226,6 +226,41 @@ export const OVERLAY_COORDS: Array<[number, number]> = [
   [640, 115],  // Tengah atas
 ];
 
+// 35 Slide Image Insertion Models (Up to 3 images inserted on any theme slide)
+export interface SlideImageModel {
+  name: string;
+  frameStyle: number; // 0: Glass, 1: Polaroid, 2: Circle, 3: Cinematic, 4: Stack, 5: Gold, 6: Clean
+  arrStyle: number;   // 0: Right, 1: Left, 2: Bottom, 3: Top, 4: Diagonal
+}
+
+export const SLIDE_IMAGE_MODELS: SlideImageModel[] = [];
+const FRAME_STYLES = [
+  'Kartu Kaca',
+  'Polaroid Klasik',
+  'Lingkaran Lensa',
+  'Sinematik 16:9',
+  'Tumpukan Melayang',
+  'Bingkai Emas',
+  'Polos Minimal',
+];
+const ARR_STYLES = [
+  'Kanan Slide',
+  'Kiri Slide',
+  'Bawah Slide',
+  'Atas Slide',
+  'Diagonal Floating',
+];
+
+FRAME_STYLES.forEach((frame, fIdx) => {
+  ARR_STYLES.forEach((arr, aIdx) => {
+    SLIDE_IMAGE_MODELS.push({
+      name: `${frame} - ${arr}`,
+      frameStyle: fIdx,
+      arrStyle: aIdx,
+    });
+  });
+});
+
 // Social Export Presets
 export interface SocialPlatformConfig {
   name: string;
@@ -278,3 +313,59 @@ export const SOCIAL_PLATFORMS: SocialPlatformConfig[] = [
     note: 'Format Full HD sinematik untuk presentasi video panjang di YouTube.'
   }
 ];
+
+// 35 Slide Transition Modes
+export interface TransitionMode {
+  id: number;
+  name: string;
+  category: 'Dasar' | 'Jedag-Jedug' | 'Sinematik' | '3D & Putar' | 'Shape & Mask';
+}
+
+export const TRANSITION_MODES: TransitionMode[] = [
+  { id: 0, name: 'Pudar Silang Smooth', category: 'Dasar' },
+  { id: 1, name: 'Kilat Flash Jedag-Jedug', category: 'Jedag-Jedug' },
+  { id: 2, name: 'Zoom Bounce Beat JJ', category: 'Jedag-Jedug' },
+  { id: 3, name: 'RGB Glitch Shake Beat', category: 'Jedag-Jedug' },
+  { id: 4, name: 'Dorong Kiri (Push Left)', category: 'Dasar' },
+  { id: 5, name: 'Dorong Kanan (Push Right)', category: 'Dasar' },
+  { id: 6, name: 'Dorong Atas (Push Up)', category: 'Dasar' },
+  { id: 7, name: 'Dorong Bawah (Push Down)', category: 'Dasar' },
+  { id: 8, name: 'Sapuan Kiri (Wipe Left)', category: 'Dasar' },
+  { id: 9, name: 'Sapuan Kanan (Wipe Right)', category: 'Dasar' },
+  { id: 10, name: 'Iris Lingkaran Masuk', category: 'Shape & Mask' },
+  { id: 11, name: 'Iris Lingkaran Keluar', category: 'Shape & Mask' },
+  { id: 12, name: 'Belah Horizontal (Split H)', category: 'Shape & Mask' },
+  { id: 13, name: 'Belah Vertikal (Split V)', category: 'Shape & Mask' },
+  { id: 14, name: 'Balik Kartu 3D X', category: '3D & Putar' },
+  { id: 15, name: 'Balik Kartu 3D Y', category: '3D & Putar' },
+  { id: 16, name: 'Kubus Putar 3D', category: '3D & Putar' },
+  { id: 17, name: 'Zoom In Burst', category: 'Sinematik' },
+  { id: 18, name: 'Zoom Out Blur', category: 'Sinematik' },
+  { id: 19, name: 'Putar 180 Derajat', category: '3D & Putar' },
+  { id: 20, name: 'Putar 360 Spin', category: '3D & Putar' },
+  { id: 21, name: 'Sinematik Light Leak', category: 'Sinematik' },
+  { id: 22, name: 'Whip Pan Kiri Fast', category: 'Sinematik' },
+  { id: 23, name: 'Whip Pan Kanan Fast', category: 'Sinematik' },
+  { id: 24, name: 'Irisan Glitch Digital', category: 'Jedag-Jedug' },
+  { id: 25, name: 'Gelombang Distorsi Air', category: 'Sinematik' },
+  { id: 26, name: 'Kerai Horizontal (Blinds H)', category: 'Shape & Mask' },
+  { id: 27, name: 'Kerai Vertikal (Blinds V)', category: 'Shape & Mask' },
+  { id: 28, name: 'Sapuan Jam Radial (Clock Wipe)', category: 'Shape & Mask' },
+  { id: 29, name: 'Sapuan Miring Diagonal', category: 'Shape & Mask' },
+  { id: 30, name: 'Papan Catur Mozaik', category: 'Shape & Mask' },
+  { id: 31, name: 'Bunga Hati TikTok', category: 'Shape & Mask' },
+  { id: 32, name: 'Star Burst Zoom', category: 'Shape & Mask' },
+  { id: 33, name: 'Neon Glow Pulse Flash', category: 'Jedag-Jedug' },
+  { id: 34, name: 'TikTok Beat Zoom Shake', category: 'Jedag-Jedug' },
+];
+
+// 6 Jedag-Jedug Beat Style Presets
+export const JEDAG_JEDUG_STYLES = [
+  { id: 0, name: 'Beat Flash White (CapCut Flash)', desc: 'Kilatan putih tajam di setiap ketukan beat' },
+  { id: 1, name: 'Zoom Bounce Beat (Viral TikTok)', desc: 'Zoom membal dan membesar berirama' },
+  { id: 2, name: 'RGB Glitch Shake (Vameo Style)', desc: 'Getaran chromatic aberration RGB glitch' },
+  { id: 3, name: 'Strobe Light Disco (Kelap-Kelip)', desc: 'Efek lampu panggung kelap-kelip kontras' },
+  { id: 4, name: 'Heartbeat Pulse (Denyut Jantung)', desc: 'Denyutan ganda halus bergelombang' },
+  { id: 5, name: 'Neon Flicker Party (Warna Cyber)', desc: 'Kilau neon warna-warni yang berdenyut' },
+];
+

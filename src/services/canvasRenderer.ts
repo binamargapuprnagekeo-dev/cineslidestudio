@@ -6,6 +6,7 @@ import {
   PHOTO_PRESETS,
   OVERLAY_MODELS,
   OVERLAY_COORDS,
+  SLIDE_IMAGE_MODELS,
 } from '../constants/presets';
 import { drawPhotoAvatar } from './avatar3d';
 
@@ -199,90 +200,187 @@ function drawProceduralSky(ctx: CanvasRenderingContext2D, config: { sky: string[
 export function renderThemeBackground(ctx: CanvasRenderingContext2D, theme: ThemeConfig): void {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
-  if (!theme.art) {
-    const grad = ctx.createLinearGradient(0, 0, W, H);
-    grad.addColorStop(0, theme.bg);
-    grad.addColorStop(1, theme.b2);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
+
+  // Base Gradient
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, theme.bg);
+  grad.addColorStop(1, theme.b2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  const art = theme.art;
+  if (!art) return;
+
+  if (SCENE_CONFIGS[art]) {
+    drawProceduralSky(ctx, SCENE_CONFIGS[art]);
     return;
   }
 
-  if (SCENE_CONFIGS[theme.art]) {
-    drawProceduralSky(ctx, SCENE_CONFIGS[theme.art]);
-    return;
-  }
+  ctx.save();
 
-  // Abstract theme art
-  if (theme.art === 'wave') {
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#f7fbff');
-    grad.addColorStop(1, '#d9e8fb');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-    const waves: [string, number, number, number][] = [
-      ['#bcd4f6', 0.8, 38, 0.006],
-      ['#8fb6ee', 0.86, 32, 0.008],
-      ['#5b8fe0', 0.92, 26, 0.011],
+  if (art === 'mount') {
+    ctx.fillStyle = theme.b2;
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    ctx.lineTo(0, H * 0.65);
+    ctx.lineTo(W * 0.25, H * 0.4);
+    ctx.lineTo(W * 0.5, H * 0.68);
+    ctx.lineTo(W * 0.75, H * 0.35);
+    ctx.lineTo(W, H * 0.6);
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  } else if (art === 'circ') {
+    const circles = [
+      [W * 0.85, H * 0.2, 180, 0.25],
+      [W * 0.15, H * 0.8, 220, 0.2],
+      [W * 0.7, H * 0.85, 140, 0.18],
     ];
-    waves.forEach(([col, yR, amp, freq], idx) => {
-      ctx.fillStyle = col;
-      ctx.globalAlpha = 0.85;
+    circles.forEach(([cx, cy, r, a]) => {
+      ctx.globalAlpha = a;
+      ctx.fillStyle = theme.ac;
       ctx.beginPath();
-      ctx.moveTo(0, H);
-      for (let X = 0; X <= W; X += 10) {
-        ctx.lineTo(X, H * yR + Math.sin(X * freq + idx * 2) * amp);
-      }
-      ctx.lineTo(W, H);
-      ctx.closePath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.globalAlpha = 1;
-  } else if (theme.art === 'star') {
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#050816');
-    grad.addColorStop(1, '#14204a');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#fff';
-    for (let i = 0; i < 150; i++) {
-      ctx.globalAlpha = 0.3 + rnd(i + 9) * 0.7;
+  } else if (art === 'line') {
+    ctx.strokeStyle = theme.ac;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.25;
+    for (let i = 0; i < 8; i++) {
       ctx.beginPath();
-      ctx.arc(rnd(i) * W, rnd(i + 500) * H * 0.9, rnd(i + 900) * 1.6 + 0.4, 0, 7);
-      ctx.fill();
+      ctx.moveTo(0, i * 110);
+      ctx.lineTo(W * 0.6, i * 110 + 200);
+      ctx.lineTo(W, i * 110 + 50);
+      ctx.stroke();
     }
     ctx.globalAlpha = 1;
-    ctx.fillStyle = '#fdf6d8';
-    ctx.beginPath();
-    ctx.arc(W * 0.85, H * 0.2, 52, 0, 7);
-    ctx.fill();
-    ctx.fillStyle = '#080d20';
-    ctx.beginPath();
-    ctx.arc(W * 0.85 + 24, H * 0.2 - 10, 48, 0, 7);
-    ctx.fill();
-  } else if (theme.art === 'aur') {
-    ctx.fillStyle = '#070b1a';
+  } else if (art === 'sun') {
+    const sunGrad = ctx.createRadialGradient(W * 0.8, H * 0.25, 20, W * 0.8, H * 0.25, 300);
+    sunGrad.addColorStop(0, `${theme.ac}bb`);
+    sunGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = sunGrad;
     ctx.fillRect(0, 0, W, H);
-    const auroras: [number, number, number, string][] = [
-      [1000, 160, 520, '124,92,255'],
-      [1150, 620, 480, '0,200,180'],
-      [420, 780, 420, '255,100,170'],
+  } else if (art === 'dot') {
+    ctx.fillStyle = theme.ac;
+    ctx.globalAlpha = 0.12;
+    for (let x = 40; x < W; x += 60) {
+      for (let y = 40; y < H; y += 60) {
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  } else if (art === 'tri') {
+    ctx.strokeStyle = theme.ac;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.18;
+    for (let x = 0; x < W + 200; x += 160) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x - 80, H);
+      ctx.lineTo(x + 80, H);
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else if (art === 'grid') {
+    ctx.strokeStyle = theme.ac;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.15;
+    for (let x = 0; x < W; x += 70) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 0; y < H; y += 70) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else if (art === 'ring') {
+    ctx.strokeStyle = theme.ac;
+    ctx.globalAlpha = 0.3;
+    for (let r = 80; r <= 360; r += 70) {
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(W * 0.82, H * 0.28, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else if (art === 'topo') {
+    ctx.strokeStyle = theme.ac;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.22;
+    for (let i = 1; i <= 6; i++) {
+      ctx.beginPath();
+      ctx.arc(W * 0.2, H * 0.7, i * 75, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else if (art === 'boke') {
+    const bokehs = [
+      [W * 0.2, H * 0.3, 90],
+      [W * 0.5, H * 0.7, 140],
+      [W * 0.8, H * 0.4, 110],
+      [W * 0.85, H * 0.8, 70],
     ];
-    auroras.forEach(([ox, oy, or, rgb]) => {
-      const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, or);
-      g.addColorStop(0, `rgba(${rgb},0.55)`);
-      g.addColorStop(1, `rgba(${rgb},0)`);
+    bokehs.forEach(([bx, by, br]) => {
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+      g.addColorStop(0, `${theme.ac}66`);
+      g.addColorStop(1, 'transparent');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
     });
+  } else if (art === 'hexa') {
+    ctx.strokeStyle = theme.ac;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.14;
+    const r = 35;
+    for (let y = 0; y < H + 50; y += r * 1.5) {
+      for (let x = 0; x < W + 50; x += r * Math.sqrt(3)) {
+        const cx = x + (Math.floor(y / (r * 1.5)) % 2 ? (r * Math.sqrt(3)) / 2 : 0);
+        ctx.beginPath();
+        for (let a = 0; a < 6; a++) {
+          const angle = (Math.PI / 3) * a;
+          const px = cx + r * Math.cos(angle);
+          const py = y + r * Math.sin(angle);
+          if (a === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
   } else {
-    // Default fallback gradient
-    const grad = ctx.createLinearGradient(0, 0, W, H);
-    grad.addColorStop(0, theme.bg);
-    grad.addColorStop(1, theme.b2);
-    ctx.fillStyle = grad;
+    // Default studio ambient corner glow & slash accents for all other themes
+    const g = ctx.createRadialGradient(W * 0.85, H * 0.15, 10, W * 0.85, H * 0.15, 450);
+    g.addColorStop(0, `${theme.ac}44`);
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = theme.ac;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.25;
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.85);
+    ctx.lineTo(W * 0.35, H);
+    ctx.moveTo(W * 0.7, 0);
+    ctx.lineTo(W, H * 0.4);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
+
+  ctx.restore();
 }
 
 // ----------------- Procedural Opening Presets -----------------
@@ -921,6 +1019,212 @@ export function drawVideoOverlay(
   ctx.restore();
 }
 
+// ----------------- 35 Slide Image Insertion Models -----------------
+export function drawSlideImages(
+  ctx: CanvasRenderingContext2D,
+  sc: Scene,
+  time: number,
+  accentColor: string
+): void {
+  const A = sc.ov;
+  if (!A || !A.length) return;
+
+  const count = Math.min(3, A.length);
+  const modelIdx = sc.ovs || 0;
+  const model = SLIDE_IMAGE_MODELS[modelIdx] || SLIDE_IMAGE_MODELS[0];
+  const frameStyle = model.frameStyle;
+  const arrStyle = model.arrStyle;
+
+  // Determine positions based on arrangement style
+  const coords: Array<{ x: number; y: number; w: number; h: number; rot: number }> = [];
+
+  if (arrStyle === 0) {
+    // Right Column
+    const baseX = 980;
+    const startY = count === 1 ? 360 : count === 2 ? 260 : 180;
+    const gapY = count === 3 ? 170 : 200;
+    for (let i = 0; i < count; i++) {
+      coords.push({ x: baseX, y: startY + i * gapY, w: 230, h: 150, rot: (i % 2 === 0 ? -1 : 1) * 0.03 });
+    }
+  } else if (arrStyle === 1) {
+    // Left Column
+    const baseX = 200;
+    const startY = count === 1 ? 360 : count === 2 ? 260 : 180;
+    const gapY = count === 3 ? 170 : 200;
+    for (let i = 0; i < count; i++) {
+      coords.push({ x: baseX, y: startY + i * gapY, w: 230, h: 150, rot: (i % 2 === 0 ? 1 : -1) * 0.03 });
+    }
+  } else if (arrStyle === 2) {
+    // Bottom Row
+    const baseY = 560;
+    const startX = count === 1 ? 640 : count === 2 ? 460 : 320;
+    const gapX = count === 3 ? 320 : 360;
+    for (let i = 0; i < count; i++) {
+      coords.push({ x: startX + i * gapX, y: baseY, w: 220, h: 140, rot: (i - 1) * 0.04 });
+    }
+  } else if (arrStyle === 3) {
+    // Top Banner
+    const baseY = 140;
+    const startX = count === 1 ? 640 : count === 2 ? 460 : 320;
+    const gapX = count === 3 ? 320 : 360;
+    for (let i = 0; i < count; i++) {
+      coords.push({ x: startX + i * gapX, y: baseY, w: 220, h: 130, rot: (1 - i) * 0.03 });
+    }
+  } else {
+    // Diagonal Floating
+    const points = [
+      { x: 960, y: 220, w: 230, h: 150, rot: -0.06 },
+      { x: 220, y: 460, w: 220, h: 145, rot: 0.05 },
+      { x: 920, y: 520, w: 210, h: 140, rot: -0.04 },
+    ];
+    for (let i = 0; i < count; i++) {
+      const p = points[i];
+      const floatY = Math.sin(time * 1.6 + i * 2) * 8;
+      coords.push({ x: p.x, y: p.y + floatY, w: p.w, h: p.h, rot: p.rot });
+    }
+  }
+
+  // Draw each inserted image
+  coords.forEach((pos, i) => {
+    const asset = A[i];
+    if (!asset || !asset.el) return;
+
+    const { x, y, w, h, rot } = pos;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+
+    // Frame Style 0: Glassmorphism Card
+    if (frameStyle === 0) {
+      ctx.fillStyle = 'rgba(10, 16, 28, 0.55)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = 'rgba(0,0,0,0.4)';
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetY = 5;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 8, -h / 2 - 8, w + 16, h + 16, 16);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, 12);
+      ctx.clip();
+      placeMedia(asset.el, -w / 2, -h / 2, w, h, 'penuh', ctx);
+      ctx.restore();
+    }
+    // Frame Style 1: Polaroid Klasik
+    else if (frameStyle === 1) {
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(0,0,0,0.45)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 6;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 10, -h / 2 - 10, w + 20, h + 42, 8);
+      ctx.fill();
+
+      // Tape at top
+      ctx.fillStyle = 'rgba(235, 220, 180, 0.7)';
+      ctx.fillRect(-20, -h / 2 - 18, 40, 12);
+
+      ctx.shadowBlur = 0;
+      placeMedia(asset.el, -w / 2, -h / 2, w, h, 'penuh', ctx);
+    }
+    // Frame Style 2: Lingkaran Lensa
+    else if (frameStyle === 2) {
+      const radius = Math.min(w, h) / 2;
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 4;
+      ctx.shadowColor = accentColor;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius + 4, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.clip();
+      placeMedia(asset.el, -radius, -radius, radius * 2, radius * 2, 'penuh', ctx);
+      ctx.restore();
+    }
+    // Frame Style 3: Sinematik 16:9
+    else if (frameStyle === 3) {
+      ctx.fillStyle = '#0b0f17';
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 6, -h / 2 - 6, w + 12, h + 12, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, 8);
+      ctx.clip();
+      placeMedia(asset.el, -w / 2, -h / 2, w, h, 'penuh', ctx);
+      ctx.restore();
+    }
+    // Frame Style 4: Tumpukan Melayang
+    else if (frameStyle === 4) {
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(-w / 2 + 10, -h / 2 + 10, w, h);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(0,0,0,0.3)';
+      ctx.shadowBlur = 12;
+      ctx.fillRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8);
+
+      ctx.shadowBlur = 0;
+      placeMedia(asset.el, -w / 2, -h / 2, w, h, 'penuh', ctx);
+    }
+    // Frame Style 5: Bingkai Emas (Gold Luxury)
+    else if (frameStyle === 5) {
+      const goldGrad = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+      goldGrad.addColorStop(0, '#e0b44c');
+      goldGrad.addColorStop(0.5, '#fff3a8');
+      goldGrad.addColorStop(1, '#b38224');
+
+      ctx.fillStyle = goldGrad;
+      ctx.shadowColor = 'rgba(224, 180, 76, 0.4)';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 8, -h / 2 - 8, w + 16, h + 16, 12);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, 8);
+      ctx.clip();
+      placeMedia(asset.el, -w / 2, -h / 2, w, h, 'penuh', ctx);
+      ctx.restore();
+    }
+    // Frame Style 6: Polos Minimal
+    else {
+      ctx.shadowColor = 'rgba(0,0,0,0.4)';
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetY = 4;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, 14);
+      ctx.clip();
+      placeMedia(asset.el, -w / 2, -h / 2, w, h, 'penuh', ctx);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  });
+}
+
 // ----------------- Master Slide Canvas Drawing -----------------
 export function drawScene(
   ctx: CanvasRenderingContext2D,
@@ -1113,30 +1417,97 @@ export function drawScene(
     // Picture-in-picture video overlays
     drawVideoOverlay(ctx, sc, time, dur);
   } else {
-    // Default bullet slide (poin, split, splitL, etc.)
+    // PowerPoint-style Slide Content Layout
+    const userInk = sc.textColor || ink;
+    const fontMult = sc.fontSize || 1.0;
+    const fontWeight = sc.fontWeight || 500;
+    const lineHeightMult = sc.lineHeight || 1.3;
+    const numCols = sc.cols || 1;
+
+    // Optional Container Card Box
+    if (sc.boxBg && sc.boxBg !== 'none') {
+      ctx.save();
+      if (sc.boxBg === 'glass') {
+        ctx.fillStyle = 'rgba(10, 16, 28, 0.45)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      } else if (sc.boxBg === 'dark') {
+        ctx.fillStyle = 'rgba(5, 8, 15, 0.85)';
+        ctx.strokeStyle = ac;
+      } else {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+      }
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(60, 50, W - 120, H - 100, 20);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Title
     ctx.fillStyle = ac;
     ctx.fillRect(80, 70, 90, 8);
-    ctx.fillStyle = ink;
-    setCanvasFont(ctx, 52, 800);
+    ctx.fillStyle = userInk;
+    const titleSize = Math.round(52 * fontMult);
+    setCanvasFont(ctx, titleSize, Math.max(700, fontWeight));
+
     let y = 140;
     const titleLines = wrapText(sc.title, 1100, ctx).slice(0, 2);
     titleLines.forEach((l) => {
       ctx.fillText(l, 80, y);
-      y += 62;
+      y += titleSize * 1.2;
     });
 
     const items = sc.body.split('\n').filter(Boolean);
-    setCanvasFont(ctx, 32, 500);
-    items.slice(0, 7).forEach((item, idx) => {
-      ctx.fillStyle = ac;
-      ctx.beginPath();
-      ctx.arc(90, y + 26, 6, 0, 7);
-      ctx.fill();
-      ctx.fillStyle = ink;
-      ctx.fillText(item, 115, y + 36);
-      y += 54;
-    });
+    const bodySize = Math.max(16, Math.min(36, Math.round(32 * fontMult * (items.length > 8 ? 0.75 : 1.0))));
+    setCanvasFont(ctx, bodySize, fontWeight);
+
+    const lineGap = Math.round(bodySize * lineHeightMult * 1.25);
+
+    if (numCols > 1 && items.length > 1) {
+      // Multi-column layout
+      const colWidth = (W - 160 - (numCols - 1) * 40) / numCols;
+      const itemsPerCol = Math.ceil(items.length / numCols);
+
+      items.forEach((item, idx) => {
+        const colIdx = Math.floor(idx / itemsPerCol);
+        const rowIdx = idx % itemsPerCol;
+        const colX = 80 + colIdx * (colWidth + 40);
+        const itemY = y + rowIdx * lineGap;
+
+        ctx.fillStyle = ac;
+        ctx.beginPath();
+        ctx.arc(colX + 10, itemY - bodySize * 0.3, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = userInk;
+        const wrapped = wrapText(item, colWidth - 30, ctx);
+        wrapped.forEach((wl, wIdx) => {
+          ctx.fillText(wl, colX + 25, itemY + wIdx * (bodySize * 1.2));
+        });
+      });
+    } else {
+      // Single column layout with auto-fit
+      items.forEach((item) => {
+        const wrapped = wrapText(item, 1050, ctx);
+        wrapped.forEach((wl, wIdx) => {
+          if (wIdx === 0) {
+            ctx.fillStyle = ac;
+            ctx.beginPath();
+            ctx.arc(90, y - bodySize * 0.3, 5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = userInk;
+          ctx.fillText(wl, 115, y);
+          y += lineGap;
+        });
+      });
+    }
   }
+
+  // Draw Inserted Slide Images (Up to 3 images with 35 Models)
+  drawSlideImages(ctx, sc, time, ac);
 
   ctx.globalAlpha = 1;
 
@@ -1207,4 +1578,439 @@ export function drawScene(
     ctx.fillStyle = ac;
     ctx.fillRect(0, H - 6, prog * W, 6);
   }
+
+  // CapCut / TikTok / Vameo Jedag-Jedug Viral Beat Animations
+  applyJedagJedugEffect(ctx, sc, time, W, H);
 }
+
+// CapCut / TikTok Jedag-Jedug Beat Effect Renderer
+function applyJedagJedugEffect(
+  ctx: CanvasRenderingContext2D,
+  sc: Scene,
+  time: number,
+  W: number,
+  H: number
+): void {
+  if (!sc.jj) return;
+  const style = sc.jjStyle || 0;
+  const beatPeriod = 0.45; // ~133 BPM
+  const phase = (time % beatPeriod) / beatPeriod;
+  const beatIntensity = Math.pow(Math.max(0, 1 - phase * 3.5), 2);
+
+  if (style === 0) {
+    // 0: Beat Flash White (CapCut Flash)
+    if (beatIntensity > 0.05) {
+      ctx.fillStyle = `rgba(255, 255, 255, ${beatIntensity * 0.75})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  } else if (style === 1) {
+    // 1: Zoom Bounce Beat
+    if (beatIntensity > 0.05) {
+      ctx.fillStyle = `rgba(224, 180, 76, ${beatIntensity * 0.15})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  } else if (style === 2) {
+    // 2: RGB Glitch Shake (Vameo Style)
+    if (beatIntensity > 0.1) {
+      ctx.fillStyle = `rgba(0, 245, 212, ${beatIntensity * 0.25})`;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = `rgba(241, 91, 181, ${beatIntensity * 0.25})`;
+      ctx.fillRect((Math.random() - 0.5) * 15, (Math.random() - 0.5) * 10, W, H);
+    }
+  } else if (style === 3) {
+    // 3: Strobe Light Disco
+    if (beatIntensity > 0.2) {
+      ctx.fillStyle = phase < 0.25 ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect(0, 0, W, H);
+    }
+  } else if (style === 4) {
+    // 4: Heartbeat Pulse
+    const heartBeat = Math.sin(time * 12) * Math.exp(-3 * (phase % 0.5));
+    if (heartBeat > 0.3) {
+      ctx.fillStyle = `rgba(230, 57, 70, ${heartBeat * 0.2})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  } else if (style === 5) {
+    // 5: Neon Flicker Party
+    if (beatIntensity > 0.05) {
+      const colors = ['#00f5d4', '#f15bb5', '#fee440', '#3a86ff'];
+      const c = colors[Math.floor((time * 8) % colors.length)];
+      ctx.strokeStyle = c;
+      ctx.lineWidth = 12 * beatIntensity;
+      ctx.strokeRect(6, 6, W - 12, H - 12);
+    }
+  }
+}
+
+// ----------------- 35 Slide Transition Engine -----------------
+export function drawSlideTransition(
+  ctx: CanvasRenderingContext2D,
+  prevCanvas: HTMLCanvasElement,
+  nextCanvas: HTMLCanvasElement,
+  progress: number,
+  trModeIndex = 0
+): void {
+  const W = CANVAS_WIDTH;
+  const H = CANVAS_HEIGHT;
+  const p = Math.max(0, Math.min(1, progress));
+
+  ctx.clearRect(0, 0, W, H);
+
+  switch (trModeIndex) {
+    case 1: { // Kilat Flash Jedag-Jedug
+      ctx.drawImage(p < 0.5 ? prevCanvas : nextCanvas, 0, 0);
+      const flash = Math.sin(p * Math.PI);
+      ctx.fillStyle = `rgba(255,255,255,${flash * 0.9})`;
+      ctx.fillRect(0, 0, W, H);
+      break;
+    }
+    case 2: { // Zoom Bounce Beat JJ
+      const scale = 1 + Math.sin(p * Math.PI) * 0.3;
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(scale, scale);
+      ctx.drawImage(p < 0.5 ? prevCanvas : nextCanvas, -W / 2, -H / 2);
+      ctx.restore();
+      break;
+    }
+    case 3: { // RGB Glitch Shake Beat
+      const shift = Math.sin(p * Math.PI) * 30;
+      ctx.drawImage(prevCanvas, -shift * (1 - p), 0);
+      ctx.globalAlpha = p;
+      ctx.drawImage(nextCanvas, shift * p, 0);
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case 4: { // Push Left
+      ctx.drawImage(prevCanvas, -p * W, 0);
+      ctx.drawImage(nextCanvas, (1 - p) * W, 0);
+      break;
+    }
+    case 5: { // Push Right
+      ctx.drawImage(prevCanvas, p * W, 0);
+      ctx.drawImage(nextCanvas, -(1 - p) * W, 0);
+      break;
+    }
+    case 6: { // Push Up
+      ctx.drawImage(prevCanvas, 0, -p * H);
+      ctx.drawImage(nextCanvas, 0, (1 - p) * H);
+      break;
+    }
+    case 7: { // Push Down
+      ctx.drawImage(prevCanvas, 0, p * H);
+      ctx.drawImage(nextCanvas, 0, -(1 - p) * H);
+      break;
+    }
+    case 8: { // Wipe Left
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect((1 - p) * W, 0, p * W, H);
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 9: { // Wipe Right
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, p * W, H);
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 10: { // Circle Iris In
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(W / 2, H / 2, (p * Math.hypot(W, H)) / 2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 11: { // Circle Iris Out
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(W / 2, H / 2, ((1 - p) * Math.hypot(W, H)) / 2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 12: { // Split Horizontal
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.save();
+      const midY = H / 2;
+      const hHalf = (p * H) / 2;
+      ctx.beginPath();
+      ctx.rect(0, midY - hHalf, W, hHalf * 2);
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 13: { // Split Vertical
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.save();
+      const midX = W / 2;
+      const wHalf = (p * W) / 2;
+      ctx.beginPath();
+      ctx.rect(midX - wHalf, 0, wHalf * 2, H);
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 14: { // 3D Card Flip X
+      const rot = p * Math.PI;
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(Math.cos(rot), 1);
+      ctx.drawImage(rot < Math.PI / 2 ? prevCanvas : nextCanvas, -W / 2, -H / 2);
+      ctx.restore();
+      break;
+    }
+    case 15: { // 3D Card Flip Y
+      const rot = p * Math.PI;
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(1, Math.cos(rot));
+      ctx.drawImage(rot < Math.PI / 2 ? prevCanvas : nextCanvas, -W / 2, -H / 2);
+      ctx.restore();
+      break;
+    }
+    case 16: { // Cube Rotate 3D
+      ctx.save();
+      ctx.drawImage(prevCanvas, -p * W * 0.7, 0, W * (1 - p * 0.3), H);
+      ctx.drawImage(nextCanvas, (1 - p) * W * 0.7, 0, W * (0.7 + p * 0.3), H);
+      ctx.restore();
+      break;
+    }
+    case 17: { // Zoom In Burst
+      const scaleNext = 0.5 + p * 0.5;
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.globalAlpha = p;
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(scaleNext, scaleNext);
+      ctx.drawImage(nextCanvas, -W / 2, -H / 2);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case 18: { // Zoom Out Blur
+      const scalePrev = 1 + p * 0.4;
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(scalePrev, scalePrev);
+      ctx.drawImage(prevCanvas, -W / 2, -H / 2);
+      ctx.restore();
+      ctx.globalAlpha = p;
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case 19: { // Spin 180
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(p * Math.PI);
+      const s = 1 - Math.sin(p * Math.PI) * 0.4;
+      ctx.scale(s, s);
+      ctx.drawImage(p < 0.5 ? prevCanvas : nextCanvas, -W / 2, -H / 2);
+      ctx.restore();
+      break;
+    }
+    case 20: { // Spin 360
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(p * Math.PI * 2);
+      const s = 1 - Math.sin(p * Math.PI) * 0.3;
+      ctx.scale(s, s);
+      ctx.drawImage(p < 0.5 ? prevCanvas : nextCanvas, -W / 2, -H / 2);
+      ctx.restore();
+      break;
+    }
+    case 21: { // Light Leak Flash
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.globalAlpha = p;
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.globalAlpha = 1;
+      const leakGrad = ctx.createRadialGradient(W * p, H / 2, 50, W * p, H / 2, 400);
+      leakGrad.addColorStop(0, 'rgba(255, 215, 0, 0.85)');
+      leakGrad.addColorStop(1, 'rgba(255, 100, 0, 0)');
+      ctx.fillStyle = leakGrad;
+      ctx.fillRect(0, 0, W, H);
+      break;
+    }
+    case 22: { // Whip Pan Left
+      const offset = Math.pow(p, 2) * W;
+      ctx.drawImage(prevCanvas, -offset, 0);
+      ctx.drawImage(nextCanvas, W - offset, 0);
+      break;
+    }
+    case 23: { // Whip Pan Right
+      const offset = Math.pow(p, 2) * W;
+      ctx.drawImage(prevCanvas, offset, 0);
+      ctx.drawImage(nextCanvas, -W + offset, 0);
+      break;
+    }
+    case 24: { // Glitch Slice Distortion
+      ctx.drawImage(p < 0.5 ? prevCanvas : nextCanvas, 0, 0);
+      const numSlices = 10;
+      const sliceH = H / numSlices;
+      for (let i = 0; i < numSlices; i++) {
+        const dx = (Math.random() - 0.5) * 60 * Math.sin(p * Math.PI);
+        ctx.drawImage(p < 0.5 ? prevCanvas : nextCanvas, 0, i * sliceH, W, sliceH, dx, i * sliceH, W, sliceH);
+      }
+      break;
+    }
+    case 25: { // Wave Distortion
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.globalAlpha = p;
+      const waveOffset = Math.sin(p * Math.PI * 4) * 20;
+      ctx.drawImage(nextCanvas, waveOffset, 0);
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case 26: { // Horizontal Blinds
+      ctx.drawImage(prevCanvas, 0, 0);
+      const blinds = 8;
+      const bH = H / blinds;
+      ctx.save();
+      ctx.beginPath();
+      for (let i = 0; i < blinds; i++) {
+        ctx.rect(0, i * bH, W, bH * p);
+      }
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 27: { // Vertical Blinds
+      ctx.drawImage(prevCanvas, 0, 0);
+      const blinds = 12;
+      const bW = W / blinds;
+      ctx.save();
+      ctx.beginPath();
+      for (let i = 0; i < blinds; i++) {
+        ctx.rect(i * bW, 0, bW * p, H);
+      }
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 28: { // Radial Clock Wipe
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(W / 2, H / 2);
+      ctx.arc(W / 2, H / 2, Math.hypot(W, H), -Math.PI / 2, -Math.PI / 2 + p * Math.PI * 2);
+      ctx.lineTo(W / 2, H / 2);
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 29: { // Diagonal Slant Wipe
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(p * (W + H), 0);
+      ctx.lineTo(p * (W + H) - H, H);
+      ctx.lineTo(0, H);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 30: { // Checkerboard Grid
+      ctx.drawImage(prevCanvas, 0, 0);
+      const rows = 6;
+      const cols = 10;
+      const cW = W / cols;
+      const rH = H / rows;
+      ctx.save();
+      ctx.beginPath();
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const szW = cW * p;
+          const szH = rH * p;
+          ctx.rect(c * cW + (cW - szW) / 2, r * rH + (rH - szH) / 2, szW, szH);
+        }
+      }
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 31: { // Heart Shape Bloom
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.save();
+      ctx.beginPath();
+      const hSize = p * W * 0.8;
+      const cx = W / 2;
+      const cy = H / 2;
+      ctx.moveTo(cx, cy - hSize * 0.3);
+      ctx.bezierCurveTo(cx - hSize * 0.5, cy - hSize * 0.8, cx - hSize, cy - hSize * 0.1, cx, cy + hSize * 0.6);
+      ctx.bezierCurveTo(cx + hSize, cy - hSize * 0.1, cx + hSize * 0.5, cy - hSize * 0.8, cx, cy - hSize * 0.3);
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 32: { // Star Burst Zoom
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.save();
+      ctx.beginPath();
+      const outerR = p * W * 0.9;
+      const innerR = outerR * 0.5;
+      const points = 5;
+      const cx = W / 2;
+      const cy = H / 2;
+      for (let i = 0; i < points * 2; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const angle = (i * Math.PI) / points - Math.PI / 2;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.restore();
+      break;
+    }
+    case 33: { // Neon Glow Pulse Flash
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.globalAlpha = p;
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.globalAlpha = 1;
+      const nGlow = Math.sin(p * Math.PI);
+      ctx.strokeStyle = '#00f5d4';
+      ctx.lineWidth = nGlow * 30;
+      ctx.strokeRect(0, 0, W, H);
+      break;
+    }
+    case 34: default: { // TikTok Beat Zoom Shake
+      const shakeX = Math.sin(p * Math.PI * 10) * 15;
+      const shakeY = Math.cos(p * Math.PI * 10) * 10;
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+      ctx.drawImage(prevCanvas, 0, 0);
+      ctx.globalAlpha = p;
+      ctx.drawImage(nextCanvas, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+      break;
+    }
+  }
+}
+
