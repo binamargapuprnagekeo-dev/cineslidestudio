@@ -53,6 +53,14 @@ export function setCanvasFont(ctx: CanvasRenderingContext2D, size: number, weigh
   ctx.font = `${weight} ${size}px "Bricolage Grotesque", system-ui, sans-serif`;
 }
 
+// Reset shadow properties to prevent blurry ghosting/shadow leakage on text
+export function resetShadow(ctx: CanvasRenderingContext2D): void {
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+}
+
 // Place image or video onto canvas respecting aspect ratio (fit: 'pas' or 'penuh')
 export function placeMedia(
   el: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement,
@@ -1283,6 +1291,7 @@ export function drawScene(
     const cardH = 360;
     const cardX = (W - cardW) / 2;
     const cardY = H * 0.24;
+    const userInk = sc.textColor || ink;
 
     ctx.save();
     // Translucent glass card
@@ -1309,28 +1318,23 @@ export function drawScene(
     ctx.textAlign = 'center';
     ctx.fillText(tagText, W / 2, cardY + 49);
 
-    // Main Title with subtle shadow
-    ctx.fillStyle = ink;
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 14;
-    ctx.shadowOffsetY = 4;
+    // Main Title with crisp rendering (reset shadow to prevent ghosting)
+    resetShadow(ctx);
+    ctx.fillStyle = userInk;
     setCanvasFont(ctx, 60, 800);
     ctx.fillText(sc.title || (layout === 'pembuka' ? 'Judul Presentasi' : 'Terima Kasih'), W / 2, cardY + 140);
-    ctx.shadowBlur = 0;
 
     // Animated Underline Bar (Expanding from center)
     const lineW = 180 * Math.min(1, ez(time / 0.7));
-    ctx.shadowColor = ac;
-    ctx.shadowBlur = 12;
     ctx.fillStyle = ac;
     ctx.beginPath();
     ctx.roundRect(W / 2 - lineW / 2, cardY + 168, lineW, 5, 2.5);
     ctx.fill();
-    ctx.shadowBlur = 0;
 
     // Body Text
-    ctx.fillStyle = ink;
-    ctx.globalAlpha = 0.9;
+    resetShadow(ctx);
+    ctx.fillStyle = userInk;
+    ctx.globalAlpha = 0.95;
     setCanvasFont(ctx, 26, 500);
     const bodyLines = sc.body.split('\n').filter(Boolean);
     bodyLines.forEach((line, idx) => {
@@ -1339,9 +1343,11 @@ export function drawScene(
     ctx.textAlign = 'left';
     ctx.restore();
   } else if (layout === 'judul') {
+    const userInk = sc.textColor || ink;
+    resetShadow(ctx);
     ctx.fillStyle = ac;
     ctx.fillRect(80, 190, 110, 9);
-    ctx.fillStyle = ink;
+    ctx.fillStyle = userInk;
     setCanvasFont(ctx, 76, 800);
     let y = 300;
     const titleLines = wrapText(sc.title, 1050, ctx).slice(0, 3);
@@ -1357,10 +1363,12 @@ export function drawScene(
       ctx.fillText(line, 80, y - 10 + idx * 46);
     });
   } else if (layout === 'kutipan') {
+    const userInk = sc.textColor || ink;
+    resetShadow(ctx);
     ctx.fillStyle = ac;
     setCanvasFont(ctx, 220, 800);
     ctx.fillText('\u201C', 70, 310);
-    ctx.fillStyle = ink;
+    ctx.fillStyle = userInk;
     setCanvasFont(ctx, 42, 600);
     let y = 250;
     const quoteLines = wrapText(sc.body, 980, ctx).slice(0, 5);
@@ -1374,9 +1382,11 @@ export function drawScene(
       ctx.fillText(`\u2014 ${sc.title}`, 190, y + 25);
     }
   } else if (layout === 'angka') {
+    const userInk = sc.textColor || ink;
+    resetShadow(ctx);
     ctx.fillStyle = ac;
     ctx.fillRect(80, 70, 90, 8);
-    ctx.fillStyle = ink;
+    ctx.fillStyle = userInk;
     setCanvasFont(ctx, 52, 800);
     ctx.fillText(sc.title, 80, 140);
 
@@ -1392,7 +1402,7 @@ export function drawScene(
       ctx.fillRect(X, 220, cardW, 250);
       ctx.fillStyle = ac;
       ctx.fillRect(X, 220, cardW, 8);
-      ctx.fillStyle = ink;
+      ctx.fillStyle = userInk;
       setCanvasFont(ctx, n > 3 ? 56 : 76, 800);
       ctx.fillText(val, X + 24, 340);
       setCanvasFont(ctx, 24, 500);
@@ -1402,6 +1412,7 @@ export function drawScene(
       });
     });
   } else if (layout === 'video') {
+    resetShadow(ctx);
     // Title overlay on video for first 4.5 seconds
     if (sc.title && time < 4.5) {
       ctx.globalAlpha = Math.min(1, Math.max(0, 4.5 - time));
@@ -1423,6 +1434,8 @@ export function drawScene(
     const fontWeight = sc.fontWeight || 500;
     const lineHeightMult = sc.lineHeight || 1.3;
     const numCols = sc.cols || 1;
+
+    resetShadow(ctx);
 
     // Optional Container Card Box
     if (sc.boxBg && sc.boxBg !== 'none') {
@@ -1446,6 +1459,7 @@ export function drawScene(
     }
 
     // Title
+    resetShadow(ctx);
     ctx.fillStyle = ac;
     ctx.fillRect(80, 70, 90, 8);
     ctx.fillStyle = userInk;

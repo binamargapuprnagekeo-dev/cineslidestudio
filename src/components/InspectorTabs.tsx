@@ -8,6 +8,7 @@ import {
   SLIDE_IMAGE_MODELS,
   TRANSITION_MODES,
   JEDAG_JEDUG_STYLES,
+  TEXT_COLORS_25,
 } from '../constants/presets';
 import {
   Sliders,
@@ -555,32 +556,65 @@ export const InspectorTabs: React.FC<InspectorTabsProps> = ({
                 </div>
               </div>
 
-              {/* Row 4: Custom Text Color Picker */}
-              <div>
-                <label className="block text-[10px] text-[#8fa1b4] mb-1">Warna Teks Kustom</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={scene.textColor || '#ffffff'}
-                    onChange={(e) => onUpdateScene({ textColor: e.target.value })}
-                    className="w-8 h-8 rounded-lg bg-transparent border border-[#26364a] cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={scene.textColor || ''}
-                    onChange={(e) => onUpdateScene({ textColor: e.target.value })}
-                    placeholder="Bawaan Tema (Default)"
-                    className="flex-1 bg-[#16212e] border border-[#26364a] rounded-lg px-2.5 py-1.5 text-xs outline-none font-mono"
-                  />
-                  {scene.textColor && (
-                    <button
-                      type="button"
-                      onClick={() => onUpdateScene({ textColor: '' })}
-                      className="px-2 py-1.5 bg-[#16212e] border border-[#26364a] rounded-lg text-[10px] text-[#8fa1b4] hover:text-white"
-                    >
-                      Reset
-                    </button>
-                  )}
+              {/* Row 4: 25 Text Color Swatches Palette */}
+              <div className="flex flex-col gap-2 pt-2 border-t border-[#26364a]/70">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] text-[#e0b44c] font-semibold">
+                    Warna Teks Slide (25 Pilihan Warna)
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    {scene.textColor && (
+                      <button
+                        type="button"
+                        onClick={() => onUpdateScene({ textColor: '' })}
+                        className="px-2 py-0.5 bg-[#16212e] border border-[#26364a] rounded-md text-[10px] text-[#8fa1b4] hover:text-white transition-colors"
+                        title="Kembali ke warna bawaan tema"
+                      >
+                        Reset Tema
+                      </button>
+                    )}
+                    <span
+                      className="w-4 h-4 rounded-full border border-white/30 inline-block shadow-sm"
+                      style={{ backgroundColor: scene.textColor || '#ffffff' }}
+                    />
+                    <input
+                      type="color"
+                      value={scene.textColor || '#ffffff'}
+                      onChange={(e) => onUpdateScene({ textColor: e.target.value })}
+                      className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0"
+                      title="Pilih warna bebas (Hex Color)"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-5 gap-1.5 p-2 bg-[#0b121b] border border-[#26364a] rounded-lg max-h-48 overflow-y-auto">
+                  {TEXT_COLORS_25.map((c) => {
+                    const isSelected = (scene.textColor || '').toLowerCase() === c.hex.toLowerCase();
+                    return (
+                      <button
+                        key={c.hex}
+                        type="button"
+                        onClick={() => onUpdateScene({ textColor: c.hex })}
+                        className={`group relative h-8 rounded-md border flex items-center justify-center transition-all ${
+                          isSelected
+                            ? 'border-[#e0b44c] ring-2 ring-[#e0b44c]/50 scale-105 z-10'
+                            : 'border-white/10 hover:border-white/40 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: c.hex }}
+                        title={`${c.name} (${c.hex})`}
+                      >
+                        {isSelected && (
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              ['#ffffff', '#e9eef4', '#ffd166', '#fde047', '#a7f3d0'].includes(c.hex)
+                                ? 'bg-black'
+                                : 'bg-white'
+                            }`}
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

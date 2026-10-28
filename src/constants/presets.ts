@@ -369,3 +369,33 @@ export const JEDAG_JEDUG_STYLES = [
   { id: 5, name: 'Neon Flicker Party (Warna Cyber)', desc: 'Kilau neon warna-warni yang berdenyut' },
 ];
 
+// 25 Vibrant & Professional Text Colors
+export const TEXT_COLORS_25 = [
+  { hex: '#ffffff', name: 'Putih Bersih' },
+  { hex: '#e9eef4', name: 'Perak Perak' },
+  { hex: '#f3ca6a', name: 'Kuning Emas' },
+  { hex: '#ffd166', name: 'Kuning Kunyit' },
+  { hex: '#fde047', name: 'Kuning Lemon' },
+  { hex: '#4cc9f0', name: 'Biru Sian' },
+  { hex: '#38bdf8', name: 'Sian Cerah' },
+  { hex: '#3a86ff', name: 'Biru Elektrik' },
+  { hex: '#60a5fa', name: 'Biru Langit' },
+  { hex: '#2fb36b', name: 'Hijau Zamrud' },
+  { hex: '#06d6a0', name: 'Hijau Mint' },
+  { hex: '#34d399', name: 'Hijau Toska' },
+  { hex: '#a7f3d0', name: 'Hijau Pastel' },
+  { hex: '#f43f5e', name: 'Merah Mawar' },
+  { hex: '#ff4d4d', name: 'Merah Cerah' },
+  { hex: '#fca5a5', name: 'Koral Merah' },
+  { hex: '#ff70a6', name: 'Pink Fuchsia' },
+  { hex: '#f472b6', name: 'Pink Lembut' },
+  { hex: '#fb923c', name: 'Oranye Jingga' },
+  { hex: '#f97316', name: 'Oranye Studio' },
+  { hex: '#c084fc', name: 'Ungu Violet' },
+  { hex: '#8b5cf6', name: 'Ungu Lavender' },
+  { hex: '#e879f9', name: 'Magenta Studio' },
+  { hex: '#cbd5e1', name: 'Abu-abu Terang' },
+  { hex: '#0f172a', name: 'Hitam Pekat' },
+] as const;
+
+
