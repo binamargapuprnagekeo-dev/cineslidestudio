@@ -19,8 +19,12 @@ provider.addScope('https://www.googleapis.com/auth/spreadsheets');
 let cachedAccessToken: string | null = null;
 let isSigningIn = false;
 
+import { Scene, SceneLayout } from '../types';
+import { generateUid } from './storageService';
+
 const STORAGE_KEY_WEBHOOK = 'cineslide_sheet_webhook';
 const STORAGE_KEY_SHEET = 'cineslide_sheet_url';
+const STORAGE_KEY_DRIVE_FOLDER = 'cineslide_drive_folder_url';
 
 // Default starter Google Apps Script snippet generator for user reference
 export const DEFAULT_APPS_SCRIPT_CODE = `/**
@@ -173,6 +177,391 @@ export function saveSheetUrl(url: string): void {
     localStorage.setItem(STORAGE_KEY_SHEET, url.trim());
   } catch {}
 }
+
+export function getSavedDriveFolderUrl(): string {
+  try {
+    return localStorage.getItem(STORAGE_KEY_DRIVE_FOLDER) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function saveDriveFolderUrl(url: string): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_DRIVE_FOLDER, url.trim());
+  } catch {}
+}
+
+export interface SheetSlideRow {
+  title: string;
+  body: string;
+  text: string;
+  layout?: string;
+  duration?: number;
+  image?: string;
+}
+
+export interface ParsedGoogleSheetInfo {
+  isValid: boolean;
+  sheetId: string | null;
+  gid: string | null;
+  csvExportUrl: string | null;
+  gvizUrl: string | null;
+  cleanUrl: string;
+  isDriveFolder?: boolean;
+}
+
+// Parse Google Sheet URL or Google Drive Link
+export function parseGoogleSheetUrl(rawUrl: string): ParsedGoogleSheetInfo {
+  const url = rawUrl.trim();
+  if (!url) {
+    return {
+      isValid: false,
+      sheetId: null,
+      gid: null,
+      csvExportUrl: null,
+      gvizUrl: null,
+      cleanUrl: '',
+    };
+  }
+
+  // Check if it's a Drive folder link
+  if (url.includes('drive.google.com/drive/folders/')) {
+    const folderMatch = url.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+    return {
+      isValid: true,
+      sheetId: folderMatch ? folderMatch[1] : null,
+      gid: null,
+      csvExportUrl: null,
+      gvizUrl: null,
+      cleanUrl: url,
+      isDriveFolder: true,
+    };
+  }
+
+  // Check if published web URL: /d/e/2PACX-.../pub
+  const pubMatch = url.match(/\/spreadsheets\/d\/e\/([a-zA-Z0-9-_]+)\//);
+  if (pubMatch) {
+    const pubId = pubMatch[1];
+    return {
+      isValid: true,
+      sheetId: pubId,
+      gid: null,
+      csvExportUrl: `https://docs.google.com/spreadsheets/d/e/${pubId}/pub?output=csv`,
+      gvizUrl: `https://docs.google.com/spreadsheets/d/e/${pubId}/pub?output=csv`,
+      cleanUrl: url,
+    };
+  }
+
+  // Standard sheet URL: /spreadsheets/d/([a-zA-Z0-9-_]+)
+  const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (!idMatch) {
+    // If user pasted raw spreadsheet ID (length >= 25 alphanumeric)
+    if (/^[a-zA-Z0-9-_]{25,}$/.test(url)) {
+      const sheetId = url;
+      return {
+        isValid: true,
+        sheetId,
+        gid: '0',
+        csvExportUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`,
+        gvizUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=0`,
+        cleanUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/edit#gid=0`,
+      };
+    }
+    return {
+      isValid: false,
+      sheetId: null,
+      gid: null,
+      csvExportUrl: null,
+      gvizUrl: null,
+      cleanUrl: url,
+    };
+  }
+
+  const sheetId = idMatch[1];
+  const gidMatch = url.match(/[?#&]gid=([0-9]+)/);
+  const gid = gidMatch ? gidMatch[1] : '0';
+
+  return {
+    isValid: true,
+    sheetId,
+    gid,
+    csvExportUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`,
+    gvizUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`,
+    cleanUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/edit#gid=${gid}`,
+  };
+}
+
+// RFC 4180 Compliant CSV Parser
+export function parseCSV(csvText: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentCell = '';
+  let insideQuotes = false;
+
+  // Auto-detect delimiter: check first line for comma vs tab vs semicolon
+  const firstLine = csvText.split('\n')[0] || '';
+  let delimiter = ',';
+  if (firstLine.includes('\t') && !firstLine.includes(',')) {
+    delimiter = '\t';
+  } else if (firstLine.includes(';') && !firstLine.includes(',')) {
+    delimiter = ';';
+  }
+
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    const nextChar = csvText[i + 1];
+
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        currentCell += '"';
+        i++; // skip escaped quote
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === delimiter && !insideQuotes) {
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+    } else if ((char === '\r' || char === '\n') && !insideQuotes) {
+      if (char === '\r' && nextChar === '\n') {
+        i++;
+      }
+      currentRow.push(currentCell.trim());
+      if (currentRow.some((c) => c.length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentCell = '';
+    } else {
+      currentCell += char;
+    }
+  }
+
+  if (currentCell.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some((c) => c.length > 0)) {
+      rows.push(currentRow);
+    }
+  }
+
+  return rows;
+}
+
+// Fetch and parse data from a public or shared Google Sheet URL
+export async function fetchSheetDataFromUrl(sheetUrl: string): Promise<{
+  success: boolean;
+  rows: SheetSlideRow[];
+  rawHeaders: string[];
+  rawData: string[][];
+  sheetId?: string;
+  error?: string;
+}> {
+  const parsed = parseGoogleSheetUrl(sheetUrl);
+  if (!parsed.isValid || !parsed.csvExportUrl) {
+    return {
+      success: false,
+      rows: [],
+      rawHeaders: [],
+      rawData: [],
+      error:
+        'URL Google Sheet tidak valid. Masukkan URL lengkap seperti https://docs.google.com/spreadsheets/d/.../edit',
+    };
+  }
+
+  let csvText = '';
+  let fetchError = '';
+
+  // Try gviz endpoint first, then export endpoint
+  const urlsToTry = [parsed.gvizUrl!, parsed.csvExportUrl!];
+
+  for (const targetUrl of urlsToTry) {
+    try {
+      const res = await fetch(targetUrl);
+      if (res.ok) {
+        const text = await res.text();
+        if (text.includes('<!DOCTYPE html') || text.includes('<html')) {
+          fetchError =
+            'Google Sheet memerlukan izin akses publik. Pastikan link diatur ke "Siapa saja yang memiliki link" (Anyone with the link).';
+          continue;
+        }
+        csvText = text;
+        break;
+      } else {
+        fetchError = `HTTP ${res.status}: ${res.statusText}`;
+      }
+    } catch (e: any) {
+      fetchError = e.message || 'Gagal menghubungi server Google Sheet';
+    }
+  }
+
+  if (!csvText) {
+    return {
+      success: false,
+      rows: [],
+      rawHeaders: [],
+      rawData: [],
+      error:
+        fetchError ||
+        'Gagal mengunduh data CSV dari Google Sheet. Pastikan izin berbagi telah diatur ke "Siapa saja yang memiliki link"!',
+    };
+  }
+
+  const table = parseCSV(csvText);
+  if (table.length === 0) {
+    return {
+      success: false,
+      rows: [],
+      rawHeaders: [],
+      rawData: [],
+      error: 'Google Sheet kosong atau tidak memiliki data.',
+    };
+  }
+
+  const headers = table[0];
+  const dataRows = table.slice(1);
+
+  // Column matching logic
+  const findCol = (keywords: string[]) => {
+    return headers.findIndex((h) => {
+      const norm = h.toLowerCase().trim();
+      return keywords.some((k) => norm.includes(k));
+    });
+  };
+
+  const titleIdx = findCol(['judul', 'title', 'nama', 'topik', 'slide']);
+  const bodyIdx = findCol(['isi', 'body', 'konten', 'content', 'deskripsi', 'poin']);
+  const textIdx = findCol(['narasi', 'naskah', 'dubbing', 'suara', 'voice', 'text', 'bicara']);
+  const layoutIdx = findCol(['layout', 'tata letak', 'model', 'tipe', 'jenis']);
+  const durIdx = findCol(['durasi', 'duration', 'detik', 'sec']);
+  const imgIdx = findCol(['gambar', 'image', 'foto', 'bg', 'background']);
+
+  const slideRows: SheetSlideRow[] = dataRows
+    .filter((row) => row.some((c) => c.trim().length > 0))
+    .map((row, i) => {
+      const title =
+        titleIdx >= 0 ? row[titleIdx] || '' : row[0] || `Slide ${i + 1}`;
+      const body =
+        bodyIdx >= 0
+          ? row[bodyIdx] || ''
+          : row[1] !== undefined && titleIdx !== 1
+          ? row[1]
+          : '';
+      const text =
+        textIdx >= 0
+          ? row[textIdx] || ''
+          : row[2] !== undefined && bodyIdx !== 2
+          ? row[2]
+          : '';
+      const layout = layoutIdx >= 0 ? row[layoutIdx] : undefined;
+      const durationVal = durIdx >= 0 ? parseFloat(row[durIdx]) : undefined;
+      const duration = !isNaN(durationVal as number) ? durationVal : undefined;
+      const image = imgIdx >= 0 ? row[imgIdx] : undefined;
+
+      return {
+        title: title.trim(),
+        body: body.trim(),
+        text: text.trim(),
+        layout: layout?.trim(),
+        duration,
+        image: image?.trim(),
+      };
+    });
+
+  return {
+    success: true,
+    rows: slideRows,
+    rawHeaders: headers,
+    rawData: dataRows,
+    sheetId: parsed.sheetId || undefined,
+  };
+}
+
+// Convert parsed rows into CineSlide Scene objects
+export function convertSheetRowsToScenes(rows: SheetSlideRow[]): Scene[] {
+  const validLayouts = [
+    'pembuka',
+    'poin',
+    'perbandingan',
+    'kutipan',
+    'angka',
+    'tahapan',
+    'kolom',
+    'video',
+    'penutup',
+    'gerak',
+    'foto',
+    'kartu',
+    'split',
+    'splitL',
+  ];
+
+  return rows.map((r, idx) => {
+    let layout = (r.layout || '').toLowerCase().trim();
+    if (!validLayouts.includes(layout)) {
+      if (idx === 0) layout = 'pembuka';
+      else if (idx === rows.length - 1 && rows.length > 2) layout = 'penutup';
+      else layout = 'poin';
+    }
+
+    const scene: Scene = {
+      id: generateUid(),
+      layout: layout as SceneLayout,
+      title: r.title || `Slide ${idx + 1}`,
+      body: r.body || '',
+      text: r.text || '',
+      cap: true,
+      fit: 'pas',
+      bg: null,
+      imgs: [],
+      audio: null,
+      vs: 0,
+      vd: r.duration && r.duration > 0 ? r.duration : 0,
+      va: 'mute',
+      av: layout !== 'pembuka' && layout !== 'penutup',
+      ps: 0,
+      fs: 0,
+      fmix: null,
+      ta: 0,
+      tp: 0,
+      kc: 1,
+    };
+
+    return scene;
+  });
+}
+
+// Generate CSV string suitable for Google Sheets
+export function generateGoogleSheetCsv(scenes: Scene[]): string {
+  const headers = [
+    'No',
+    'Judul Slide',
+    'Isi / Konten',
+    'Naskah Narasi / Suara AI',
+    'Model Layout',
+    'Durasi (dtk)',
+  ];
+
+  const escapeCell = (val: string | number) => {
+    const s = String(val ?? '').replace(/"/g, '""');
+    return `"${s}"`;
+  };
+
+  const rows = scenes.map((s, idx) => [
+    idx + 1,
+    escapeCell(s.title),
+    escapeCell(s.body),
+    escapeCell(s.text),
+    escapeCell(s.layout),
+    escapeCell(
+      s.vd && s.vd > 0 ? s.vd : s.audio ? Math.round(s.audio.buf.duration) : 5
+    ),
+  ]);
+
+  return [headers.map(escapeCell).join(','), ...rows.map((r) => r.join(','))].join(
+    '\r\n'
+  );
+}
+
 
 // Send request to Webhook / Apps Script Web App Endpoint
 export async function sendWebhookRequest(action: string, payload: Record<string, unknown> = {}): Promise<any> {

@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   Music,
   Video as VideoIcon,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface SceneListProps {
@@ -22,10 +23,12 @@ interface SceneListProps {
   onAddOutro: () => void;
   onAddPhotoSlide: (files: File[]) => void;
   onAddMotionGraphic: () => void;
+  onOpenGoogleSheets?: () => void;
   onDeleteScene: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
 }
+
 
 export const SceneList: React.FC<SceneListProps> = ({
   scenes,
@@ -37,6 +40,7 @@ export const SceneList: React.FC<SceneListProps> = ({
   onAddOutro,
   onAddPhotoSlide,
   onAddMotionGraphic,
+  onOpenGoogleSheets,
   onDeleteScene,
   onMoveUp,
   onMoveDown,
@@ -185,6 +189,18 @@ export const SceneList: React.FC<SceneListProps> = ({
           <Sparkles size={13} className="text-[#a78bfa]" />
           <span>+ Animasi</span>
         </button>
+
+        {onOpenGoogleSheets && (
+          <button
+            type="button"
+            onClick={onOpenGoogleSheets}
+            className="col-span-2 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-[#2fb36b]/40 bg-[#16291e] text-xs font-bold text-[#8be2ab] hover:bg-[#1f382a] transition-colors shadow-sm"
+            title="Impor naskah presentasi langsung dari tautan Google Sheets"
+          >
+            <FileSpreadsheet size={13} className="text-[#2fb36b]" />
+            <span>+ Impor dari Google Sheet</span>
+          </button>
+        )}
 
         <input
           ref={photoInputRef}

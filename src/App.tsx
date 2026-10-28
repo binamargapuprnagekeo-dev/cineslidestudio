@@ -54,6 +54,8 @@ import {
   registerEntryInSheet,
   fetchCatalogFromSheet,
   CatalogItem,
+  getSavedSheetUrl,
+  getSavedWebhookUrl,
 } from './services/googleWorkspace';
 
 import { Header } from './components/Header';
@@ -64,6 +66,7 @@ import { PreviewCanvas } from './components/PreviewCanvas';
 import { InspectorTabs } from './components/InspectorTabs';
 import { SocialModal } from './components/SocialModal';
 import { ProjectModal } from './components/ProjectModal';
+import { GoogleSheetModal } from './components/GoogleSheetModal';
 import { ProgressBar } from './components/ProgressBar';
 
 export default function App() {
@@ -222,6 +225,9 @@ export default function App() {
   // --- Modals & Progress ---
   const [isProjectModalOpen, setIsProjectModalOpen] = useState<boolean>(false);
   const [isSocialModalOpen, setIsSocialModalOpen] = useState<boolean>(false);
+  const [isSheetModalOpen, setIsSheetModalOpen] = useState<boolean>(false);
+  const [isSheetConnected, setIsSheetConnected] = useState<boolean>(() => !!getSavedSheetUrl());
+  const [isWebhookConnected, setIsWebhookConnected] = useState<boolean>(() => !!getSavedWebhookUrl());
   const [savedProjectsList, setSavedProjectsList] = useState<ProjectMetadata[]>([]);
   const [isBusy, setIsBusy] = useState<boolean>(false);
   const [busyMessage, setBusyMessage] = useState<string>('');
@@ -975,9 +981,21 @@ export default function App() {
     setFeedback('Telah keluar dari akun Google.');
   };
 
+  const handleImportScenesFromSheet = (newScenes: Scene[], mode: 'replace' | 'append') => {
+    if (mode === 'replace') {
+      setScenes(newScenes);
+      setCurrentIndex(0);
+    } else {
+      setScenes((prev) => [...prev, ...newScenes]);
+    }
+    setIsSheetConnected(true);
+  };
+
   const handleSaveToDrive = async () => {
-    if (!googleUser) {
-      await handleGoogleSignIn();
+    const webhook = getSavedWebhookUrl();
+    if (!googleUser && !webhook) {
+      setIsSheetModalOpen(true);
+      setFeedback('Silakan isi URL Webhook atau Link Google Sheet untuk menyimpan tanpa login popup.', true);
       return;
     }
     setIsSavingToDrive(true);
@@ -1015,6 +1033,7 @@ export default function App() {
       const cat = await fetchCatalogFromSheet();
       setDriveCatalog(cat.items);
       setSheetsUrl(cat.sheetUrl);
+      setIsWebhookConnected(!!webhook);
       setFeedback('Proyek tersimpan di Google Drive dan tercatat di Google Sheets!');
     } catch (e: any) {
       setFeedback(`Gagal simpan ke Drive: ${e.message}`, true);
@@ -1024,17 +1043,20 @@ export default function App() {
   };
 
   const handleRefreshDriveCatalog = async () => {
-    if (!googleUser) return;
+    const webhook = getSavedWebhookUrl();
+    if (!googleUser && !webhook) return;
     try {
       setFeedback('Memperbarui daftar dari Google Sheets...');
       const cat = await fetchCatalogFromSheet();
       setDriveCatalog(cat.items);
       setSheetsUrl(cat.sheetUrl);
+      setIsWebhookConnected(!!webhook);
       setFeedback('Daftar file diperbarui dari Google Sheets.');
     } catch (e: any) {
       setFeedback(`Gagal memperbarui: ${e.message}`, true);
     }
   };
+
 
   const handleOpenDriveProject = async (fileId: string, name: string) => {
     setIsBusy(true);
@@ -1117,12 +1139,19 @@ export default function App() {
         onThemeChange={(th) => setCurrentTheme(th)}
         onOpenProjects={() => setIsProjectModalOpen(true)}
         onOpenSocial={() => setIsSocialModalOpen(true)}
+        onOpenGoogleSheets={() => {
+          setIsSheetConnected(!!getSavedSheetUrl());
+          setIsWebhookConnected(!!getSavedWebhookUrl());
+          setIsSheetModalOpen(true);
+        }}
         onExportPPTX={handleExportPPTX}
         onExportVideo={handleExportStandardVideo}
         isColabConnected={isColabConnected}
         colabGpu={colabGpu}
         isBusy={isBusy}
         googleUser={googleUser}
+        isSheetConnected={isSheetConnected}
+        isWebhookConnected={isWebhookConnected}
         onGoogleSignIn={handleGoogleSignIn}
         onGoogleSignOut={handleGoogleSignOut}
       />
@@ -1135,6 +1164,11 @@ export default function App() {
             scenes={scenes}
             currentIndex={currentIndex}
             onSelectScene={(idx) => setCurrentIndex(idx)}
+            onOpenGoogleSheets={() => {
+              setIsSheetConnected(!!getSavedSheetUrl());
+              setIsWebhookConnected(!!getSavedWebhookUrl());
+              setIsSheetModalOpen(true);
+            }}
             onAddSlide={() => {
               const newScene: Scene = {
                 id: generateUid(),
@@ -1612,6 +1646,23 @@ export default function App() {
         onRefreshDriveCatalog={handleRefreshDriveCatalog}
         onOpenDriveProject={handleOpenDriveProject}
         onDeleteDriveEntry={handleDeleteDriveEntry}
+      />
+
+      {/* Google Sheet & Drive Connection Modal */}
+      <GoogleSheetModal
+        isOpen={isSheetModalOpen}
+        onClose={() => {
+          setIsSheetConnected(!!getSavedSheetUrl());
+          setIsWebhookConnected(!!getSavedWebhookUrl());
+          setIsSheetModalOpen(false);
+        }}
+        scenes={scenes}
+        onImportScenes={handleImportScenesFromSheet}
+        projectName={projectName}
+        googleUser={googleUser}
+        onGoogleSignIn={handleGoogleSignIn}
+        onGoogleSignOut={handleGoogleSignOut}
+        onShowFeedback={setFeedback}
       />
     </div>
   );

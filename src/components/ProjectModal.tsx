@@ -5,6 +5,7 @@ import {
   getSavedWebhookUrl,
   saveWebhookUrl,
   getSavedSheetUrl,
+  saveSheetUrl,
   DEFAULT_APPS_SCRIPT_CODE,
 } from '../services/googleWorkspace';
 import {
@@ -71,12 +72,18 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   onDeleteDriveEntry,
 }) => {
   const jsonInputRef = useRef<HTMLInputElement>(null);
+  const [sheetUrlInput, setSheetUrlInput] = useState<string>(getSavedSheetUrl());
   const [webhookInput, setWebhookInput] = useState<string>(getSavedWebhookUrl());
   const [isWebhookActive, setIsWebhookActive] = useState<boolean>(!!getSavedWebhookUrl());
   const [showScriptBox, setShowScriptBox] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
   if (!isOpen) return null;
+
+  const handleSaveSheetUrl = () => {
+    saveSheetUrl(sheetUrlInput);
+    onRefreshDriveCatalog();
+  };
 
   const handleSaveWebhook = () => {
     saveWebhookUrl(webhookInput);
@@ -192,6 +199,44 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   title="Perbarui daftar file dari Google Sheets"
                 >
                   <RefreshCw size={13} />
+                </button>
+              </div>
+            </div>
+
+            {/* Direct Google Sheet URL Connection */}
+            <div className="flex flex-col gap-1.5 p-2.5 bg-[#16212e] border border-[#26364a] rounded-lg">
+              <label className="block text-[11px] text-[#8fa1b4] font-medium flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <FileSpreadsheet size={12} className="text-[#2fb36b]" />
+                  <span>Link URL Google Sheet Anda (Publik / Siapa Saja yang Memiliki Link)</span>
+                </span>
+                {activeSheetUrl && activeSheetUrl !== 'https://docs.google.com/spreadsheets/' && (
+                  <a
+                    href={activeSheetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-[#2fb36b] hover:underline flex items-center gap-1"
+                  >
+                    <span>Buka Sheet</span>
+                    <ExternalLink size={10} />
+                  </a>
+                )}
+              </label>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={sheetUrlInput}
+                  onChange={(e) => setSheetUrlInput(e.target.value)}
+                  placeholder="https://docs.google.com/spreadsheets/d/.../edit"
+                  className="flex-1 bg-[#0b121b] border border-[#26364a] rounded-lg px-3 py-1.5 text-xs text-[#e9eef4] outline-none font-mono focus:border-[#2fb36b]"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveSheetUrl}
+                  className="px-3 py-1.5 bg-[#2fb36b] hover:bg-[#38cd7b] text-[#071e11] rounded-lg font-bold text-xs shadow-sm shrink-0"
+                >
+                  Simpan Link
                 </button>
               </div>
             </div>
