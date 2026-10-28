@@ -181,13 +181,17 @@ export const InspectorTabs: React.FC<InspectorTabsProps> = ({
                       key={i}
                       type="button"
                       onClick={() => onUpdateScene({ ps: i })}
-                      className={`flex items-center min-h-[38px] px-2.5 py-1.5 rounded-lg text-left text-xs leading-normal border transition-all ${
-                        scene.ps === i
+                      className={`flex items-center gap-2 min-h-[38px] px-2.5 py-1.5 rounded-lg text-left text-xs leading-normal border transition-all ${
+                        (scene.ps ?? 0) === i
                           ? 'bg-[#22344a] border-[#e0b44c] text-white font-semibold shadow-sm ring-1 ring-[#e0b44c]/30'
                           : 'bg-[#16212e] border-[#26364a] text-[#b0c0d0] hover:text-[#e9eef4] hover:bg-[#1f2d3e]'
                       }`}
                       title={`${i + 1}. ${op[0]}`}
                     >
+                      <span
+                        className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0 shadow-sm"
+                        style={{ background: `linear-gradient(135deg, ${op[2]}, ${op[4]})` }}
+                      />
                       <span className="truncate block w-full leading-normal">
                         {i + 1}. {op[0]}
                       </span>

@@ -285,6 +285,290 @@ export function renderThemeBackground(ctx: CanvasRenderingContext2D, theme: Them
   }
 }
 
+// ----------------- Procedural Opening Presets -----------------
+export function renderOpeningPreset(
+  ctx: CanvasRenderingContext2D,
+  psIndex: number,
+  time: number,
+  dur: number
+): { ink: string; ac: string; ac2: string } {
+  const W = CANVAS_WIDTH;
+  const H = CANVAS_HEIGHT;
+  const op = OPENING_PRESETS[psIndex] || OPENING_PRESETS[0];
+  const [name, type, bg1, bg2, ac1, ac2, textColor, option] = op;
+
+  // Modern studio background gradient
+  const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+  bgGrad.addColorStop(0, bg1);
+  bgGrad.addColorStop(1, bg2);
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+
+  // Floating ambient lighting orb
+  const orbX = W * 0.5 + Math.sin(time * 0.8) * 120;
+  const orbY = H * 0.4 + Math.cos(time * 0.6) * 80;
+  const orbGlow = ctx.createRadialGradient(orbX, orbY, 10, orbX, orbY, 520);
+  orbGlow.addColorStop(0, `${ac1}33`);
+  orbGlow.addColorStop(0.6, `${ac2}18`);
+  orbGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = orbGlow;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle modern studio tech grid
+  ctx.globalAlpha = 0.05;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= W; x += 80) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= H; y += 80) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // 1. WIPE (Sleek Slashes)
+  if (type === 'wipe') {
+    const shift = (time * 140) % 400;
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = ac1;
+    ctx.beginPath();
+    ctx.moveTo(-120 + shift, 0);
+    ctx.lineTo(180 + shift, 0);
+    ctx.lineTo(-20 + shift, H);
+    ctx.lineTo(-320 + shift, H);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.globalAlpha = 0.35;
+    ctx.shadowColor = ac2;
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = ac2;
+    ctx.beginPath();
+    ctx.moveTo(W - 220 - shift, 0);
+    ctx.lineTo(W - 40 - shift, 0);
+    ctx.lineTo(W + 160 - shift, H);
+    ctx.lineTo(W - shift, H);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+  // 2. CIRCLE (Glowing Pulsing Concentric Rings)
+  else if (type === 'circle') {
+    const cx = W / 2;
+    const cy = H / 2;
+    const pulse = Math.sin(time * 1.8) * 20;
+    if (option === 2) {
+      // Sunburst rays
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = ac1;
+      for (let i = 0; i < 16; i++) {
+        const ang = (i * Math.PI) / 8 + time * 0.08;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, 700, ang - 0.08, ang + 0.08);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    for (let r = 110; r <= 420; r += 85) {
+      ctx.strokeStyle = r % 170 === 0 ? ac1 : ac2;
+      ctx.globalAlpha = 0.2 + (r / 600) * 0.25;
+      ctx.shadowColor = ac1;
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2.5 + r / 120;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + pulse, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+  // 3. LINES (Laser Neon Lines)
+  else if (type === 'lines') {
+    ctx.lineWidth = 2.5;
+    const count = 18;
+    for (let i = 0; i < count; i++) {
+      const x = ((i * (W / count) + time * 50) % (W + 240)) - 120;
+      ctx.strokeStyle = i % 2 === 0 ? ac1 : ac2;
+      ctx.shadowColor = i % 2 === 0 ? ac1 : ac2;
+      ctx.shadowBlur = 12;
+      ctx.globalAlpha = 0.15 + (i % 3) * 0.18;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + 280, H);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+  // 4. PART (Glowing Floating Particles: Stars, Bubbles, Confetti)
+  else if (type === 'part') {
+    for (let i = 0; i < 50; i++) {
+      const px = (rnd(i * 17) * W + Math.sin(time + i * 0.7) * 25 + W) % W;
+      const py = H - ((time * (35 + rnd(i) * 45) + rnd(i * 3) * H) % H);
+      const size = 3 + rnd(i * 7) * 9;
+      ctx.globalAlpha = 0.35 + rnd(i * 11) * 0.6;
+      ctx.fillStyle = i % 2 === 0 ? ac1 : ac2;
+      ctx.shadowColor = i % 2 === 0 ? ac1 : ac2;
+      ctx.shadowBlur = 8;
+
+      if (option === 0) {
+        ctx.beginPath();
+        ctx.arc(px, py, size * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (option === 1) {
+        ctx.strokeStyle = ac1;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(time * 2 + i);
+        ctx.fillRect(-size / 2, -size / 2, size, size * 0.7);
+        ctx.restore();
+      }
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+  // 5. BLOCKS (Pulsing Grid Tiles)
+  else if (type === 'blocks') {
+    const cols = 10;
+    const rows = 6;
+    const bw = W / cols;
+    const bh = H / rows;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const idx = r * cols + c;
+        const opacity = 0.04 + 0.16 * Math.abs(Math.sin(time * 1.6 + idx * 0.3));
+        ctx.fillStyle = (r + c) % 2 === 0 ? ac1 : ac2;
+        ctx.globalAlpha = opacity;
+        ctx.fillRect(c * bw + 5, r * bh + 5, bw - 10, bh - 10);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  // 6. WAVE (Smooth Motion Waves)
+  else if (type === 'wave') {
+    const waves = [
+      { col: ac1, y: H * 0.72, amp: 40, freq: 0.0045, speed: 1.8 },
+      { col: ac2, y: H * 0.82, amp: 50, freq: 0.0065, speed: -1.3 },
+    ];
+    waves.forEach((w) => {
+      ctx.fillStyle = w.col;
+      ctx.globalAlpha = 0.38;
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      for (let x = 0; x <= W; x += 12) {
+        const y = w.y + Math.sin(x * w.freq + time * w.speed) * w.amp;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+  // 7. SPOT (Cinema Studio Beam)
+  else if (type === 'spot') {
+    ctx.globalCompositeOperation = 'screen';
+    const g1 = ctx.createRadialGradient(W * 0.25, 0, 10, W * 0.4, H * 0.65, 550);
+    g1.addColorStop(0, `${ac1}cc`);
+    g1.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g1;
+    ctx.beginPath();
+    ctx.moveTo(W * 0.25, 0);
+    ctx.lineTo(W * 0.65, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fill();
+
+    const g2 = ctx.createRadialGradient(W * 0.75, 0, 10, W * 0.6, H * 0.65, 550);
+    g2.addColorStop(0, `${ac2}cc`);
+    g2.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g2;
+    ctx.beginPath();
+    ctx.moveTo(W * 0.75, 0);
+    ctx.lineTo(W, H);
+    ctx.lineTo(W * 0.35, H);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+  }
+  // 8. FRAME (Modern Glass Frame)
+  else if (type === 'frame') {
+    const pad = 42;
+    ctx.strokeStyle = ac1;
+    ctx.lineWidth = 4;
+    ctx.globalAlpha = 0.75;
+    ctx.shadowColor = ac1;
+    ctx.shadowBlur = 10;
+    ctx.strokeRect(pad, pad, W - pad * 2, H - pad * 2);
+
+    ctx.strokeStyle = ac2;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.4;
+    ctx.shadowBlur = 0;
+    ctx.strokeRect(pad + 14, pad + 14, W - (pad + 14) * 2, H - (pad + 14) * 2);
+
+    ctx.fillStyle = ac1;
+    ctx.globalAlpha = 0.9;
+    const cs = 18;
+    [[pad, pad], [W - pad, pad], [pad, H - pad], [W - pad, H - pad]].forEach(([cx, cy]) => {
+      ctx.fillRect(cx - cs / 2, cy - cs / 2, cs, cs);
+    });
+    ctx.globalAlpha = 1;
+  }
+  // 9. CURTAIN (Theater Curtain Shader)
+  else if (type === 'curtain') {
+    const curtainWidth = 150;
+    for (let x = 0; x < curtainWidth; x += 20) {
+      const foldGrad = ctx.createLinearGradient(x, 0, x + 20, 0);
+      foldGrad.addColorStop(0, ac1);
+      foldGrad.addColorStop(0.5, ac2);
+      foldGrad.addColorStop(1, bg1);
+      ctx.fillStyle = foldGrad;
+      ctx.fillRect(x, 0, 20, H);
+    }
+    for (let x = W - curtainWidth; x < W; x += 20) {
+      const foldGrad = ctx.createLinearGradient(x, 0, x + 20, 0);
+      foldGrad.addColorStop(0, bg1);
+      foldGrad.addColorStop(0.5, ac2);
+      foldGrad.addColorStop(1, ac1);
+      ctx.fillStyle = foldGrad;
+      ctx.fillRect(x, 0, 20, H);
+    }
+    ctx.fillStyle = ac1;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    for (let x = 0; x <= W; x += 80) {
+      ctx.quadraticCurveTo(x + 40, 50, x + 80, 0);
+    }
+    ctx.lineTo(W, 0);
+    ctx.lineTo(0, 0);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+
+  return { ink: textColor, ac: ac1, ac2 };
+}
+
 // ----------------- 2D Vector Presenter Avatar -----------------
 const SKIN_TONES = ['#f6d3b5', '#e8b88f', '#c98b5e', '#8d5a3b'];
 const CLOTHING_COLORS: Record<string, string> = {
@@ -657,8 +941,17 @@ export function drawScene(
   const theme = THEMES[themeIndex] || THEMES[0];
   const layout = sc.layout;
 
-  // Background
-  renderThemeBackground(ctx, theme);
+  // Background & Opening Preset Model
+  let ink = theme.ink;
+  let ac = theme.ac;
+
+  if ((layout === 'pembuka' || layout === 'penutup') && sc.ps !== undefined && OPENING_PRESETS[sc.ps]) {
+    const presetStyle = renderOpeningPreset(ctx, sc.ps, time, dur);
+    ink = presetStyle.ink;
+    ac = presetStyle.ac;
+  } else {
+    renderThemeBackground(ctx, theme);
+  }
 
   // If scene has background media (image/video)
   if (sc.bg && sc.bg.el) {
@@ -675,31 +968,72 @@ export function drawScene(
   }
 
   // Slide content based on layout
-  const ink = theme.ink;
-  const ac = theme.ac;
   const alphaAnim = Math.min(1, time / 0.6);
 
   ctx.textBaseline = 'alphabetic';
   ctx.globalAlpha = alphaAnim;
 
   if (layout === 'pembuka' || layout === 'penutup') {
-    // Elegant animated typography
-    ctx.fillStyle = ink;
-    setCanvasFont(ctx, 64, 800);
-    ctx.textAlign = 'center';
-    ctx.fillText(sc.title || (layout === 'pembuka' ? 'Judul Presentasi' : 'Terima Kasih'), W / 2, H * 0.42);
+    // Ultra-modern studio frosted glass card & typography
+    const cardW = 980;
+    const cardH = 360;
+    const cardX = (W - cardW) / 2;
+    const cardY = H * 0.24;
 
+    ctx.save();
+    // Translucent glass card
+    ctx.fillStyle = 'rgba(10, 16, 28, 0.42)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, 24);
+    ctx.fill();
+    ctx.stroke();
+
+    // Top Category Pill Tag / Badge
+    const tagText = layout === 'pembuka' ? '• PRESENTASI STUDIO' : '• CINESLIDE STUDIO AI';
+    setCanvasFont(ctx, 16, 700);
+    const tagW = ctx.measureText(tagText).width + 32;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.strokeStyle = ac;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(W / 2 - tagW / 2, cardY + 28, tagW, 30, 15);
+    ctx.fill();
+    ctx.stroke();
     ctx.fillStyle = ac;
-    ctx.fillRect(W / 2 - 80, H * 0.46, 160, 6);
+    ctx.textAlign = 'center';
+    ctx.fillText(tagText, W / 2, cardY + 49);
 
+    // Main Title with subtle shadow
+    ctx.fillStyle = ink;
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 4;
+    setCanvasFont(ctx, 60, 800);
+    ctx.fillText(sc.title || (layout === 'pembuka' ? 'Judul Presentasi' : 'Terima Kasih'), W / 2, cardY + 140);
+    ctx.shadowBlur = 0;
+
+    // Animated Underline Bar (Expanding from center)
+    const lineW = 180 * Math.min(1, ez(time / 0.7));
+    ctx.shadowColor = ac;
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = ac;
+    ctx.beginPath();
+    ctx.roundRect(W / 2 - lineW / 2, cardY + 168, lineW, 5, 2.5);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Body Text
     ctx.fillStyle = ink;
     ctx.globalAlpha = 0.9;
-    setCanvasFont(ctx, 28, 500);
+    setCanvasFont(ctx, 26, 500);
     const bodyLines = sc.body.split('\n').filter(Boolean);
     bodyLines.forEach((line, idx) => {
-      ctx.fillText(line, W / 2, H * 0.54 + idx * 42);
+      ctx.fillText(line, W / 2, cardY + 225 + idx * 40);
     });
     ctx.textAlign = 'left';
+    ctx.restore();
   } else if (layout === 'judul') {
     ctx.fillStyle = ac;
     ctx.fillRect(80, 190, 110, 9);
